@@ -1170,7 +1170,7 @@ RealOpenMM AmoebaReferenceMultipoleForce::calculateElectrostaticPairIxn( const s
     energy           *= f;
 
     // intermediate variables for the permanent components
-
+    // TODO check why there is no scaling factors in gf[0] (check with finite differences)
     gf[0] = rr3*gl[0] + rr5*(gl[1]+gl[6]) + rr7*(gl[2]+gl[7]+gl[8]) + rr9*(gl[3]+gl[5]) + rr11*gl[4];
     gf[1] = -particleK.charge*rr3 + sc[3]*rr5 - sc[5]*rr7;
     gf[2] =  particleI.charge*rr3 + sc[2]*rr5 + sc[4]*rr7;
@@ -2081,25 +2081,27 @@ void AmoebaReferencePmeMultipoleForce::getPmeScale( RealVec& scale ) const
 void AmoebaReferencePmeMultipoleForce::getDampedInverseDistances( const MultipoleParticleData& particleI,
                                                                   const MultipoleParticleData& particleJ,
                                                                   RealOpenMM dscale, RealOpenMM pscale, RealOpenMM r,
-                                                                  RealVec& dampedDInverseDistances, 
-                                                                  RealVec& dampedPInverseDistances ) const 
+                                                                  std::vector<RealOpenMM>& dampedDInverseDistances,
+                                                                  std::vector<RealOpenMM>& dampedPInverseDistances ) const
 {
 
-    RealVec scaleFactor    = RealVec( 1.0, 1.0, 1.0 );
+    RealVec scaleFactor    = RealVec( 1.0, 1.0, 1.0, 1.0 );
     RealOpenMM damp        = particleI.dampingFactor*particleJ.dampingFactor;
     if( damp != 0.0 ){
 
-        RealOpenMM ratio   = (r/damp);
-                   ratio   = ratio*ratio*ratio;
+        RealOpenMM ratio   = pow(r/damp, 4);
 
         RealOpenMM pgamma  = particleI.thole < particleJ.thole ? particleI.thole : particleJ.thole;
                    damp    = -pgamma*ratio;
 
         if( damp > -50.0) {
             RealOpenMM expdamp = EXP(damp);
-            scaleFactor[0]     = 1.0 - expdamp;
-            scaleFactor[1]     = 1.0 - expdamp*(1.0-damp);
-            scaleFactor[2]     = 1.0 - expdamp*(1.0-damp+(0.6f*damp*damp));
+            scaleFactor[0]     = 1.0 - expdamp + pow(pgamma, 1.0/4.0)*(r/damp)*EXP(ttm::gammln(3.0/4.0))*ttm::gammq(3.0/4.0, -damp);;
+            scaleFactor[1]     = 1.0 - expdamp;
+            scaleFactor[2]     = (1.0 - expdamp)- (4./3.) * pgamma * expdamp * ratio;
+            scaleFactor[3]     = ((1.0 - expdamp) - (4./3.) * pgamma * expdamp * ratio) - // rrI[2]'s factor
+                    (4./15.) * pgamma * (4. * pgamma * ratio - 1.) * expdamp / pow(damp, 4) * pow(r, 4);
+;
         }   
     }   
     RealVec dampedDScale       = scaleFactor*dscale;
@@ -2109,16 +2111,18 @@ void AmoebaReferencePmeMultipoleForce::getDampedInverseDistances( const Multipol
     RealOpenMM r5              = r3*r2;
     RealOpenMM r7              = r5*r2;
 
-    dampedDInverseDistances[0] =      (1.0-dampedDScale[0])/r3;
-    dampedDInverseDistances[1] =  3.0*(1.0-dampedDScale[1])/r5;
-    dampedDInverseDistances[2] = 15.0*(1.0-dampedDScale[2])/r7;
+    dampedDInverseDistances[0] =      (1.0-dampedDScale[0])/r;
+    dampedDInverseDistances[1] =      (1.0-dampedDScale[1])/r3;
+    dampedDInverseDistances[2] =  3.0*(1.0-dampedDScale[2])/r5;
+    dampedDInverseDistances[3] = 15.0*(1.0-dampedDScale[3])/r7;
     if( pscale == dscale ){
         dampedPInverseDistances = dampedDInverseDistances;
     } else {
         RealVec dampedPScale       = scaleFactor*pscale;
-        dampedPInverseDistances[0] =      (1.0-dampedPScale[0])/r3; 
-        dampedPInverseDistances[1] =  3.0*(1.0-dampedPScale[1])/r5;
-        dampedPInverseDistances[2] = 15.0*(1.0-dampedPScale[2])/r7;
+        dampedPInverseDistances[0] =      (1.0-dampedPScale[0])/r;
+        dampedPInverseDistances[1] =      (1.0-dampedPScale[1])/r3;
+        dampedPInverseDistances[2] =  3.0*(1.0-dampedPScale[2])/r5;
+        dampedPInverseDistances[3] = 15.0*(1.0-dampedPScale[3])/r7;
     }
 
     return;
@@ -2227,6 +2231,15 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleFieldPairIxn( cons
 
     if( particleI.particleIndex == particleJ.particleIndex )return;
 
+    // in MBPol there is no contribution to the Fixed Multipole Field from atoms of the same water molecule
+    // multipoleAtomZs is used for defining a reference frame for the water molecules and
+    // contains the indices to the other 2 atoms in the same water molecule.
+
+    bool isSameWater = (particleI.multipoleAtomZs == particleJ.particleIndex) or
+            (particleI.multipoleAtomYs == particleJ.particleIndex) or
+            (particleI.multipoleAtomXs == particleJ.particleIndex);
+    if( isSameWater )return;
+
     RealVec deltaR    = particleJ.position - particleI.position;
     getPeriodicDelta( deltaR );
     RealOpenMM r2     = deltaR.dot( deltaR );
@@ -2254,17 +2267,20 @@ void AmoebaReferencePmeMultipoleForce::calculateFixedMultipoleFieldPairIxn( cons
 
     // compute the error function scaled and unscaled terms
 
-    RealVec dampedDInverseDistances;
-    RealVec dampedPInverseDistances;
+    std::vector<RealOpenMM> dampedDInverseDistances(4);
+    std::vector<RealOpenMM> dampedPInverseDistances(4);
+
     getDampedInverseDistances( particleI, particleJ, dscale, pscale, r, dampedDInverseDistances, dampedPInverseDistances);
 
-    RealOpenMM drr3        = dampedDInverseDistances[0];
-    RealOpenMM drr5        = dampedDInverseDistances[1];
-    RealOpenMM drr7        = dampedDInverseDistances[2];
+    RealOpenMM drr1        = dampedDInverseDistances[0];
+    RealOpenMM drr3        = dampedDInverseDistances[1];
+    RealOpenMM drr5        = dampedDInverseDistances[2];
+    RealOpenMM drr7        = dampedDInverseDistances[3];
 
-    RealOpenMM prr3        = dampedPInverseDistances[0];
-    RealOpenMM prr5        = dampedPInverseDistances[1];
-    RealOpenMM prr7        = dampedPInverseDistances[2];
+    RealOpenMM prr1        = dampedPInverseDistances[0];
+    RealOpenMM prr3        = dampedPInverseDistances[1];
+    RealOpenMM prr5        = dampedPInverseDistances[2];
+    RealOpenMM prr7        = dampedPInverseDistances[3];
 
     RealOpenMM dir         = particleI.dipole.dot( deltaR );
 
@@ -3352,13 +3368,13 @@ void AmoebaReferencePmeMultipoleForce::calculateDirectInducedDipolePairIxns( con
 
     // compute the error function scaled and unscaled terms
 
+    // TODO check if we can use get and scale
     RealOpenMM scale3      = 1.0;
     RealOpenMM scale5      = 1.0;
     RealOpenMM damp        = particleI.dampingFactor*particleJ.dampingFactor;
     if( damp != 0.0 ){
 
-        RealOpenMM ratio  = (r/damp);
-              ratio       = ratio*ratio*ratio;
+        RealOpenMM ratio  = pow(r/damp, 4);
         RealOpenMM pgamma = particleI.thole < particleJ.thole ? particleI.thole : particleJ.thole;
               damp        = -pgamma*ratio;
 
@@ -3520,6 +3536,7 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
     RealOpenMM rr9    = 7.0*rr7/r2;
     RealOpenMM rr11   = 9.0*rr9/r2;
 
+    RealOpenMM scale1 = 1.0;
     RealOpenMM scale3 = 1.0;
     RealOpenMM scale5 = 1.0;
     RealOpenMM scale7 = 1.0;
@@ -3536,16 +3553,21 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
     RealOpenMM ddsc72 = 0.0;
     RealOpenMM ddsc73 = 0.0;
 
-    RealOpenMM damp   = particleI.dampingFactor*particleJ.dampingFactor;
+    RealOpenMM damp;
+    std::vector<RealOpenMM> scalingFactors(4);
+
+    getAndScaleInverseRs( particleI.dampingFactor, particleJ.dampingFactor, particleI.thole, particleJ.thole, r, true, damp, scalingFactors );
+
     if( damp != 0.0 ){
         RealOpenMM pgamma = particleI.thole < particleJ.thole ? particleI.thole : particleJ.thole;
         RealOpenMM ratio  = r/damp;
             damp     = -pgamma*ratio*ratio*ratio;
         if( damp > -50.0 ){
             RealOpenMM expdamp  = EXP(damp);
-            scale3         = 1.0 - expdamp;
-               scale5      = 1.0 - (1.0-damp)*expdamp;
-               scale7      = 1.0 - (1.0-damp+0.6*damp*damp)*expdamp;
+            scale1         = scalingFactors[0];
+            scale3         = scalingFactors[1];
+            scale5         = scalingFactors[2];
+            scale7         = scalingFactors[3];
             RealOpenMM temp3    = -3.0 * damp * expdamp / r2;
             RealOpenMM temp5    = -damp;
             RealOpenMM temp7    = -0.2 - 0.6*damp;
@@ -3568,12 +3590,14 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
     RealOpenMM dsc5 = 1.0 - scale5*scalingFactors[D_SCALE];
     RealOpenMM dsc7 = 1.0 - scale7*scalingFactors[D_SCALE];
 
+    RealOpenMM psc1 = 1.0 - scale1*scalingFactors[P_SCALE];
     RealOpenMM psc3 = 1.0 - scale3*scalingFactors[P_SCALE];
     RealOpenMM psc5 = 1.0 - scale5*scalingFactors[P_SCALE];
     RealOpenMM psc7 = 1.0 - scale7*scalingFactors[P_SCALE];
 
     RealOpenMM usc3 = 1.0 - scale3*scalingFactors[U_SCALE];
     RealOpenMM usc5 = 1.0 - scale5*scalingFactors[U_SCALE];
+    RealOpenMM usc7 = 1.0 - scale7*scalingFactors[U_SCALE];
 
     // construct necessary auxiliary vectors
 
@@ -3777,12 +3801,25 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
 
     // compute the energy contributions for this interaction
 
+
+    bool isSameWater = (particleI.multipoleAtomZs == particleJ.particleIndex) or
+            (particleI.multipoleAtomYs == particleJ.particleIndex) or
+            (particleI.multipoleAtomXs == particleJ.particleIndex);
+    // Same water atoms have no charge/charge interaction and no induced-dipole/charge interaction
+    if( isSameWater ) {
+        gl0 = 0.;
+        gli1 = 0.;
+        glip1 = 0.;
+
+    }
+    // compute the energy contributions for this interaction
+
     RealOpenMM e             = bn0*gl0 + bn1*(gl1+gl6) + bn2*(gl2+gl7+gl8) + bn3*(gl3+gl5) + bn4*gl4;
     RealOpenMM ei            = 0.5 * (bn1*(gli1+gli6) + bn2*(gli2+gli7) + bn3*gli3); 
 
     // get the real energy without any screening function
 
-    RealOpenMM erl           = rr1*gl0 + rr3*(gl1+gl6) + rr5*(gl2+gl7+gl8) + rr7*(gl3+gl5) + rr9*gl4;
+    RealOpenMM erl           = rr1*gl0*psc1 + rr3*(gl1+gl6)*psc3 + rr5*(gl2+gl7+gl8)*psc5 + rr7*(gl3+gl5)*psc7 + rr9*gl4;
     RealOpenMM erli          = 0.5*(rr3*(gli1+gli6)*psc3 + rr5*(gli2+gli7)*psc5 + rr7*gli3*psc7);
     e                   = e - (1.0-scalingFactors[M_SCALE])*erl;
     ei                  = ei - erli;
@@ -3822,12 +3859,12 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
     RealOpenMM gfi4 = 2.0 * bn2;
     RealOpenMM gfi5 = bn3 * (sci4+scip4);
     RealOpenMM gfi6 = -bn3 * (sci3+scip3);
-    RealOpenMM gfri1 = 0.5*(rr5*((gli1+gli6)*psc3
-                         + (glip1+glip6)*dsc3
-                         + scip2*usc3)
-              + rr7*((gli7+gli2)*psc5
-                         + (glip7+glip2)*dsc5
-                  - (sci3*scip4+scip3*sci4)*usc5)
+    RealOpenMM gfri1 = 0.5*(rr5*((gli1+gli6)*psc5
+                         + (glip1+glip6)*dsc5
+                         + scip2*usc5)
+              + rr7*((gli7+gli2)*psc7
+                         + (glip7+glip2)*dsc7
+                  - (sci3*scip4+scip3*sci4)*usc7)
               + rr9*(gli3*psc7+glip3*dsc7));
     RealOpenMM gfri4 = 2.0 * rr5;
     RealOpenMM gfri5 = rr7 * (sci4*psc7+scip4*dsc7);
@@ -3892,10 +3929,10 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
     // get the induced force without screening
 
     RealOpenMM ftm2ri1 = gfri1*xr + 0.5*
-        (- rr3*ck*(_inducedDipole[iIndex][0]*psc3+_inducedDipolePolar[iIndex][0]*dsc3)
+        (
          + rr5*sc4*(_inducedDipole[iIndex][0]*psc5+_inducedDipolePolar[iIndex][0]*dsc5)
          - rr7*sc6*(_inducedDipole[iIndex][0]*psc7+_inducedDipolePolar[iIndex][0]*dsc7))
-         + (rr3*ci*(_inducedDipole[jIndex][0]*psc3+_inducedDipolePolar[jIndex][0]*dsc3)
+         + (
          + rr5*sc3*(_inducedDipole[jIndex][0]*psc5+_inducedDipolePolar[jIndex][0]*dsc5)
          + rr7*sc5*(_inducedDipole[jIndex][0]*psc7+_inducedDipolePolar[jIndex][0]*dsc7))*0.5
          + rr5*usc5*(sci4*_inducedDipolePolar[iIndex][0]+scip4*_inducedDipole[iIndex][0]
@@ -3906,11 +3943,20 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
          + (qkuip1-qiukp1)*dsc5)
          + gfri5*qir1 + gfri6*qkr1;
 
+    // Same water atoms have no induced-dipole/charge interaction
+    if (not( isSameWater )) {
+
+        ftm2ri1 += (
+                - rr3*ck*(_inducedDipole[iIndex][0]*psc3+_inducedDipolePolar[iIndex][0]*dsc3) +
+                rr3*ci*(_inducedDipole[jIndex][0]*psc3+_inducedDipolePolar[jIndex][0]*dsc3)
+            )*0.5;
+    }
+
     RealOpenMM ftm2ri2 = gfri1*yr + 0.5*
-        (- rr3*ck*(_inducedDipole[iIndex][1]*psc3+_inducedDipolePolar[iIndex][1]*dsc3)
+        (
          + rr5*sc4*(_inducedDipole[iIndex][1]*psc5+_inducedDipolePolar[iIndex][1]*dsc5)
          - rr7*sc6*(_inducedDipole[iIndex][1]*psc7+_inducedDipolePolar[iIndex][1]*dsc7))
-         + (rr3*ci*(_inducedDipole[jIndex][1]*psc3+_inducedDipolePolar[jIndex][1]*dsc3)
+         + (
          + rr5*sc3*(_inducedDipole[jIndex][1]*psc5+_inducedDipolePolar[jIndex][1]*dsc5)
          + rr7*sc5*(_inducedDipole[jIndex][1]*psc7+_inducedDipolePolar[jIndex][1]*dsc7))*0.5
          + rr5*usc5*(sci4*_inducedDipolePolar[iIndex][1]+scip4*_inducedDipole[iIndex][1]
@@ -3921,11 +3967,21 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
          + (qkuip2-qiukp2)*dsc5)
          + gfri5*qir2 + gfri6*qkr2;
 
+
+    // Same water atoms have no induced-dipole/charge interaction
+    if (not( isSameWater )) {
+
+        ftm2ri2 += (
+                - rr3*ck*(_inducedDipole[iIndex][1]*psc3+_inducedDipolePolar[iIndex][1]*dsc3) +
+                rr3*ci*(_inducedDipole[jIndex][1]*psc3+_inducedDipolePolar[jIndex][1]*dsc3)
+            )*0.5;
+    }
+
     RealOpenMM ftm2ri3 = gfri1*zr + 0.5*
-        (- rr3*ck*(_inducedDipole[iIndex][2]*psc3+_inducedDipolePolar[iIndex][2]*dsc3)
+        (
          + rr5*sc4*(_inducedDipole[iIndex][2]*psc5+_inducedDipolePolar[iIndex][2]*dsc5)
          - rr7*sc6*(_inducedDipole[iIndex][2]*psc7+_inducedDipolePolar[iIndex][2]*dsc7))
-         + (rr3*ci*(_inducedDipole[jIndex][2]*psc3+_inducedDipolePolar[jIndex][2]*dsc3)
+         + (
          + rr5*sc3*(_inducedDipole[jIndex][2]*psc5+_inducedDipolePolar[jIndex][2]*dsc5)
          + rr7*sc5*(_inducedDipole[jIndex][2]*psc7+_inducedDipolePolar[jIndex][2]*dsc7))*0.5
          + rr5*usc5*(sci4*_inducedDipolePolar[iIndex][2]+scip4*_inducedDipole[iIndex][2]
@@ -3935,6 +3991,17 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
          + 0.5*gfri4*((qkui3-qiuk3)*psc5
          + (qkuip3-qiukp3)*dsc5)
          + gfri5*qir3 + gfri6*qkr3;
+
+
+    // Same water atoms have no induced-dipole/charge interaction
+    if (not( isSameWater )) {
+
+        ftm2ri3 += (
+                - rr3*ck*(_inducedDipole[iIndex][2]*psc3+_inducedDipolePolar[iIndex][2]*dsc3)    +
+                rr3*ci*(_inducedDipole[jIndex][2]*psc3+_inducedDipolePolar[jIndex][2]*dsc3)
+            )*0.5;
+    }
+
 
     // account for partially excluded induced interactions
 
@@ -3960,10 +4027,11 @@ RealOpenMM AmoebaReferencePmeMultipoleForce::calculatePmeDirectElectrostaticPair
     RealOpenMM findmp3 = temp3*ddsc33 + temp5*ddsc53;
 
     // modify the forces for partially excluded interactions
+    // FIXME check how to disable this in the xml
 
-    ftm2i1       -= (fridmp1 + findmp1);
-    ftm2i2       -= (fridmp2 + findmp2);
-    ftm2i3       -= (fridmp3 + findmp3);
+//    ftm2i1       -= (fridmp1 + findmp1);
+//    ftm2i2       -= (fridmp2 + findmp2);
+//    ftm2i3       -= (fridmp3 + findmp3);
 
     // correction to convert mutual to direct polarization force
 
