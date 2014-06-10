@@ -37,7 +37,6 @@ typedef std::map< unsigned int, RealOpenMM> MapIntRealOpenMM;
 typedef MapIntRealOpenMM::iterator MapIntRealOpenMMI;
 typedef MapIntRealOpenMM::const_iterator MapIntRealOpenMMCI;
 
-enum TholeIndices { TCC, TCD, TDD, TDDOH, TDDHH };
 
 /**
  * 2-dimensional int vector

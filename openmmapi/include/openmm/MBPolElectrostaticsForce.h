@@ -50,6 +50,7 @@ namespace OpenMM {
  * This will have no effect on Contexts that already exist unless you call updateParametersInContext().
  */
 
+
 class OPENMM_EXPORT_MBPOL MBPolElectrostaticsForce : public Force {
 
 public:
@@ -414,6 +415,8 @@ public:
        }
     }
 };
+
+enum TholeIndices { TCC, TCD, TDD, TDDOH, TDDHH };
 
 } // namespace OpenMM
 

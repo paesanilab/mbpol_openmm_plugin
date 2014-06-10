@@ -115,7 +115,7 @@ void ReferenceCalcMBPolOneBodyForceKernel::copyParametersToContext(ContextImpl& 
  * -------------------------------------------------------------------------- */
 
 ReferenceCalcMBPolElectrostaticsForceKernel::ReferenceCalcMBPolElectrostaticsForceKernel(std::string name, const Platform& platform, const System& system) : 
-         CalcMBPolElectrostaticsForceKernel(name, platform), system(system), numElectrostaticss(0), mutualInducedMaxIterations(60), mutualInducedTargetEpsilon(1.0e-03),
+         CalcMBPolElectrostaticsForceKernel(name, platform), system(system), numElectrostaticss(0), mutualInducedMaxIterations(200), mutualInducedTargetEpsilon(1.0e-03),
                                                          usePme(false),alphaEwald(0.0), cutoffDistance(1.0) {  
 
 }
