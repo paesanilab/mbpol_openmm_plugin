@@ -23,7 +23,6 @@
  */
 
 
-#include "MBPolReferenceForce.h"
 #include "MBPolReferenceDispersionForce.h"
 #include <algorithm>
 #include <cctype>

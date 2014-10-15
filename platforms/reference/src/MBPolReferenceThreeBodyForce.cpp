@@ -23,7 +23,6 @@
  */
 
 
-#include "MBPolReferenceForce.h"
 #include "MBPolReferenceThreeBodyForce.h"
 #include <algorithm>
 #include <cctype>
@@ -142,6 +141,27 @@ RealOpenMM MBPolReferenceThreeBodyForce::calculateTripletIxn( int siteI, int sit
         const OpenMM::RealVec& Hc1 = particlePositions[allParticleIndices[siteQ][1]];
         const OpenMM::RealVec& Hc2 = particlePositions[allParticleIndices[siteQ][2]];
 
+        double rab[3], rac[3], rbc[3];
+        double drab(0), drac(0), drbc(0);
+
+        for (int n = 0; n < 3; ++n) {
+            rab[n] = (Oa[n] - Ob[n])*nm_to_A;
+            drab += rab[n]*rab[n];
+
+            rac[n] = (Oa[n] - Oc[n])*nm_to_A;
+            drac += rac[n]*rac[n];
+
+            rbc[n] = (Ob[n] - Oc[n])*nm_to_A;
+            drbc += rbc[n]*rbc[n];
+        }
+
+        drab = std::sqrt(drab);
+        drac = std::sqrt(drac);
+        drbc = std::sqrt(drbc);
+
+        if ((drab < 2) or (drac < 2) or (drbc < 2))
+             return 0.;
+
           double x[36];
 
           x[0] = var(kHH_intra, dHH_intra, Ha1, Ha2);
@@ -185,26 +205,7 @@ RealOpenMM MBPolReferenceThreeBodyForce::calculateTripletIxn( int siteI, int sit
           double g[36];
           double retval = poly_3b_v2x::eval(thefit, x, g);
 
-          double rab[3], rac[3], rbc[3];
-          double drab(0), drac(0), drbc(0);
 
-          for (int n = 0; n < 3; ++n) {
-              rab[n] = (Oa[n] - Ob[n])*nm_to_A;
-              drab += rab[n]*rab[n];
-
-              rac[n] = (Oa[n] - Oc[n])*nm_to_A;
-              drac += rac[n]*rac[n];
-
-              rbc[n] = (Ob[n] - Oc[n])*nm_to_A;
-              drbc += rbc[n]*rbc[n];
-          }
-
-          drab = std::sqrt(drab);
-          drac = std::sqrt(drac);
-          drbc = std::sqrt(drbc);
-
-          if ((drab < 2) or (drac < 2) or (drbc < 2))
-               return 0.;
 
           double gab, gac, gbc;
 
