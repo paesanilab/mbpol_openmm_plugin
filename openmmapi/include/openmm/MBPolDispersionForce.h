@@ -35,8 +35,19 @@
 #include "openmm/Force.h"
 #include "internal/windowsExportMBPol.h"
 #include <vector>
+#include <string>
+#include <map>
 
+
+using std::string;
+using std::vector;
+
+using std::map;
+using std::pair;
 using namespace OpenMM;
+
+typedef map< pair<const string, const string>, pair<double, double> > c6d6Datatype;
+
 
 namespace MBPolPlugin {
 
@@ -95,7 +106,7 @@ public:
      * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                        at which the interaction site should be placed
      */
-    void setParticleParameters(int particleIndex, std::vector<int>& particleIndices);
+    void setParticleParameters(int particleIndex, string atomElement);
 
     /**
      * Get the force field parameters for a vdw particle.
@@ -107,7 +118,7 @@ public:
      * @param reductionFactor the fraction of the distance along the line from the parent particle to this particle
      *                        at which the interaction site should be placed
      */
-    void getParticleParameters(int particleIndex, std::vector<int>& particleIndices) const;
+    void getParticleParameters(int particleIndex, string & atomElement) const;
 
 
     /**
@@ -120,7 +131,11 @@ public:
      *                        at which the interaction site should be placed
      * @return index of added particle
      */
-    int addParticle(const std::vector<int> & particleIndices);
+    int addParticle(string atomElement);
+
+    void addDispersionParameters(string firstElement, string secondElement, double c6, double d6);
+
+    c6d6Datatype getDispersionParameters( void ) const;
 
     int getNumMolecules(void) const;
     /**
@@ -153,6 +168,28 @@ public:
      */
     void updateParametersInContext(Context& context);
 
+    /**
+     * Get whether to add a contribution to the energy that approximately represents the effect of VdW
+     * interactions beyond the cutoff distance.  The energy depends on the volume of the periodic box, and is only
+     * applicable when periodic boundary conditions are used.  When running simulations at constant pressure, adding
+     * this contribution can improve the quality of results.
+     */
+    bool getUseDispersionCorrection() const {
+        return useDispersionCorrection;
+    }
+
+
+    /**
+     * Set whether to add a contribution to the energy that approximately represents the effect of VdW
+     * interactions beyond the cutoff distance.  The energy depends on the volume of the periodic box, and is only
+     * applicable when periodic boundary conditions are used.  When running simulations at constant pressure, adding
+     * this contribution can improve the quality of results.
+     */
+    void setUseDispersionCorrection(bool useCorrection) {
+        useDispersionCorrection = useCorrection;
+    }
+
+
 protected:
     ForceImpl* createImpl() const;
 private:
@@ -162,18 +199,20 @@ private:
     double cutoff;
 
     std::vector<DispersionInfo> parameters;
-    std::vector< std::vector< std::vector<double> > > sigEpsTable;
+    c6d6Datatype c6d6Data;
+    bool useDispersionCorrection;
+
 };
 
 class MBPolDispersionForce::DispersionInfo {
 public:
-    std::vector<int> particleIndices;
+    string atomElement;
 
     DispersionInfo() {
 
     }
-    DispersionInfo( std::vector<int> particleIndices) :
-        particleIndices(particleIndices)  {
+    DispersionInfo( string atomElement) :
+        atomElement(atomElement)  {
     }
 };
 

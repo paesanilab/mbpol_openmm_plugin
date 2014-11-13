@@ -59,7 +59,7 @@ using namespace MBPolPlugin;
 
 const double TOL = 1e-4;
 
-void testThreeBody( FILE* log ) {
+void runTest( double boxDimension ) {
 
     std::string testName      = "testMBPolIntegrationTest";
 
@@ -68,7 +68,6 @@ void testThreeBody( FILE* log ) {
     double virtualSiteWeightO = 0.573293118;
     double virtualSiteWeightH = 0.213353441;
     MBPolElectrostaticsForce* mbpolElectrostaticsForce        = new MBPolElectrostaticsForce();;
-    mbpolElectrostaticsForce->setNonbondedMethod( MBPolElectrostaticsForce::NoCutoff );
 
     std::vector<double> zeroDipole(3);
     std::vector<double> zeroQuadrupole(9);
@@ -89,19 +88,46 @@ void testThreeBody( FILE* log ) {
 
     // Two body interaction
     MBPolTwoBodyForce* mbpolTwoBodyForce = new MBPolTwoBodyForce();
-    double cutoff = 1e10;
+    double cutoff = 10;
     mbpolTwoBodyForce->setCutoff( cutoff );
-    mbpolTwoBodyForce->setNonbondedMethod(MBPolTwoBodyForce::CutoffNonPeriodic);
 
     // Three body interaction
     MBPolThreeBodyForce* mbpolThreeBodyForce = new MBPolThreeBodyForce();
     mbpolThreeBodyForce->setCutoff( cutoff );
-    mbpolThreeBodyForce->setNonbondedMethod(MBPolThreeBodyForce::CutoffNonPeriodic);
 
     // Dispersion Force
     MBPolDispersionForce* dispersionForce = new MBPolDispersionForce();
     dispersionForce->setCutoff( cutoff );
-    dispersionForce->setNonbondedMethod(MBPolDispersionForce::CutoffNonPeriodic);
+
+    if( boxDimension > 0.0 ){
+        Vec3 a( boxDimension, 0.0, 0.0 );
+        Vec3 b( 0.0, boxDimension, 0.0 );
+        Vec3 c( 0.0, 0.0, boxDimension );
+        system.setDefaultPeriodicBoxVectors( a, b, c );
+
+        mbpolElectrostaticsForce->setNonbondedMethod( MBPolElectrostaticsForce::PME );
+        double ewaldErrorTol = 1e-2;
+        mbpolElectrostaticsForce->setEwaldErrorTolerance(ewaldErrorTol);
+
+        mbpolTwoBodyForce->setNonbondedMethod(MBPolTwoBodyForce::CutoffPeriodic);
+
+        mbpolThreeBodyForce->setNonbondedMethod(MBPolThreeBodyForce::CutoffPeriodic);
+
+        dispersionForce->setNonbondedMethod(MBPolDispersionForce::CutoffPeriodic);
+        dispersionForce->setUseDispersionCorrection(true);
+
+
+    } else {
+        mbpolElectrostaticsForce->setNonbondedMethod( MBPolElectrostaticsForce::NoCutoff );
+
+
+        mbpolTwoBodyForce->setNonbondedMethod(MBPolTwoBodyForce::CutoffNonPeriodic);
+
+        mbpolThreeBodyForce->setNonbondedMethod(MBPolThreeBodyForce::CutoffNonPeriodic);
+
+        dispersionForce->setNonbondedMethod(MBPolDispersionForce::CutoffNonPeriodic);
+
+    }
 
     int numberOfWaterMolecules = 3;
     unsigned int particlesPerMolecule = 4;
@@ -133,9 +159,17 @@ void testThreeBody( FILE* log ) {
         mbpolOneBodyForce->addOneBody(jj, jj+1, jj+2);
         mbpolTwoBodyForce->addParticle( particleIndices);
         mbpolThreeBodyForce->addParticle( particleIndices);
-        dispersionForce->addParticle( particleIndices);
+        dispersionForce->addParticle( "O");
+        dispersionForce->addParticle( "H");
+        dispersionForce->addParticle( "H");
+        dispersionForce->addParticle( "M");
 
     }
+
+    // <!-- Units: c6 [kJ mol^{-1} nm^{-6}], d6 [nm^{-1}] -->
+    dispersionForce->addDispersionParameters("O", "O", 9.92951990e+08, 9.29548582e+01);
+    dispersionForce->addDispersionParameters("O", "H", 3.49345451e+08, 9.77520243e+01);
+    dispersionForce->addDispersionParameters("H", "H", 8.40715638e+07, 9.40647517e+01);
 
     system.addForce(mbpolElectrostaticsForce);
     system.addForce(mbpolOneBodyForce);
@@ -239,9 +273,8 @@ int main( int numberOfArguments, char* argv[] ) {
     try {
         std::cout << "TestReferenceMBPolIntegrationTest running test..." << std::endl;
 
-        FILE* log = NULL;
-
-        testThreeBody( log );
+        double boxDimension = 20;
+        runTest( boxDimension );
 
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

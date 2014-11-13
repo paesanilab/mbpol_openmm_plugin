@@ -34,9 +34,11 @@
 #include "openmm/reference/ReferenceNeighborList.h"
 #include "ReferenceThreeNeighborList.h"
 #include "openmm/reference/SimTKOpenMMRealType.h"
+#include <string>
+
+using std::string;
 
 namespace MBPolPlugin {
-
 /**
  * This kernel is invoked by MBPolOneBodyForce to calculate the forces acting on the system and the energy of the system.
  */
@@ -281,7 +283,9 @@ private:
     int useCutoff;
     int usePBC;
     double cutoff;
-    std::vector< std::vector<int> > allParticleIndices;
+    double dispersionCoefficient;
+    std::vector< string > allParticleElements;
+    c6d6Datatype c6d6Data;
     const System& system;
     NeighborList* neighborList;
 };

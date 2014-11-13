@@ -37,7 +37,9 @@
 #include "openmm/internal/MBPolThreeBodyForceImpl.h"
 #include "openmm/internal/MBPolDispersionForceImpl.h"
 #include "openmm/NonbondedForce.h"
+#include "openmm/System.h"
 #include "openmm/internal/NonbondedForceImpl.h"
+#include <iostream>
 
 #include <cmath>
 #ifdef _MSC_VER
@@ -221,6 +223,8 @@ void ReferenceCalcMBPolElectrostaticsForceKernel::initialize(const OpenMM::Syste
             pmeGridDimension[0] = gridSizeX;
             pmeGridDimension[1] = gridSizeY;
             pmeGridDimension[2] = gridSizeZ;
+            std::cout << "Computed PME parameters for MBPolElectrostaticsForce, alphaEwald:" <<
+                    alphaEwald << " pmeGrid: " <<  gridSizeX << "," <<  gridSizeY << ","<<  gridSizeZ << std::endl;
         }    
     } else {
         usePme = false;
@@ -566,39 +570,39 @@ void ReferenceCalcMBPolDispersionForceKernel::initialize(const OpenMM::System& s
     // per-particle parameters
 
     numParticles = force.getNumMolecules();
-    allParticleIndices.resize(numParticles);
+    allParticleElements.resize(numParticles);
     for( int ii = 0; ii < numParticles; ii++ ){
 
-        std::vector<int> particleIndices;
-        force.getParticleParameters(ii, particleIndices );
-        allParticleIndices[ii] = particleIndices;
-
+        string atomElement;
+        force.getParticleParameters(ii,  atomElement );
+        allParticleElements[ii] = atomElement;
     }
+
+    c6d6Data = force.getDispersionParameters();
 
     useCutoff              = (force.getNonbondedMethod() != MBPolDispersionForce::NoCutoff);
     usePBC                 = (force.getNonbondedMethod() == MBPolDispersionForce::CutoffPeriodic);
     cutoff                 = force.getCutoff();
     neighborList           = useCutoff ? new NeighborList() : NULL;
+    dispersionCoefficient  = force.getUseDispersionCorrection() ?  MBPolDispersionForceImpl::calcDispersionCorrection(system, force) : 0.0;
 
 }
 
 double ReferenceCalcMBPolDispersionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
     vector<RealVec>& allPosData   = extractPositions(context);
-    vector<RealVec> posData;
-    posData.resize(numParticles);
     vector<set<int> > allExclusions;
     allExclusions.resize(numParticles);
-    // posData has only oxygens
-    for( int ii = 0; ii < numParticles; ii++ ){
-        posData[ii] = allPosData[allParticleIndices[ii][0]];
-    }
+
     vector<RealVec>& forceData = extractForces(context);
     MBPolReferenceDispersionForce dispersionForce;
     RealOpenMM energy;
     dispersionForce.setCutoff( cutoff );
     // neighborList created only with oxygens, then allParticleIndices is used to get reference to the hydrogens
-    computeNeighborListVoxelHash( *neighborList, numParticles, posData, allExclusions, extractBoxSize(context), usePBC, cutoff, 0.0, false);
+    computeNeighborListVoxelHash( *neighborList, numParticles, allPosData, allExclusions, extractBoxSize(context), usePBC, cutoff, 0.0, false);
+
+    dispersionForce.setDispersionParameters(c6d6Data);
+    RealOpenMM dispersionCorrection = 0;
     if( usePBC ){
         dispersionForce.setNonbondedMethod( MBPolReferenceDispersionForce::CutoffPeriodic);
         RealVec& box = extractBoxSize(context);
@@ -607,11 +611,13 @@ double ReferenceCalcMBPolDispersionForceKernel::execute(ContextImpl& context, bo
             throw OpenMMException("The periodic box size has decreased to less than twice the cutoff.");
         }
         dispersionForce.setPeriodicBox(box);
+        dispersionCorrection = dispersionCoefficient/(box[0]*box[1]*box[2]);
     } else {
         dispersionForce.setNonbondedMethod( MBPolReferenceDispersionForce::CutoffNonPeriodic);
     }
     // here we need allPosData, every atom!
-    energy  = dispersionForce.calculateForceAndEnergy( numParticles, allPosData, allParticleIndices, *neighborList, forceData);
+    energy  = dispersionForce.calculateForceAndEnergy( numParticles, allPosData, allParticleElements, *neighborList, forceData);
+    energy += dispersionCorrection;
 
     return static_cast<double>(energy);
 }
@@ -624,9 +630,9 @@ void ReferenceCalcMBPolDispersionForceKernel::copyParametersToContext(ContextImp
 
     for (int i = 0; i < numParticles; ++i) {
 
-        std::vector<int> particleIndices;
-        force.getParticleParameters(i, particleIndices);
-        allParticleIndices[i] = particleIndices;
+        string atomElement;
+        force.getParticleParameters(i, atomElement);
+        allParticleElements[i] = atomElement;
 
     }
 }

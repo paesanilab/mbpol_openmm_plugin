@@ -30,7 +30,7 @@
 #include "ReferenceThreeNeighborList.h"
 #include <string>
 #include <vector>
-#include "MBPolConstants.h"
+#include "openmm/internal/MBPolConstants.h"
 using namespace  OpenMM;
 using namespace MBPolPlugin;
 

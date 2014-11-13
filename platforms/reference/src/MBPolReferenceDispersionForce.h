@@ -28,12 +28,19 @@
 #include "openmm/reference/RealVec.h"
 #include "openmm/Vec3.h"
 #include "openmm/reference/ReferenceNeighborList.h"
-#include "MBPolConstants.h"
+#include "openmm/MBPolDispersionForce.h"
+#include "openmm/internal/MBPolConstants.h"
 #include <string>
 #include <vector>
+#include <map>
 
 using namespace  OpenMM;
 using namespace MBPolPlugin;
+using std::string;
+using std::pair;
+using std::vector;
+using std::map;
+
 
 class MBPolReferenceDispersionForce;
 // typedef  RealOpenMM (MBPolReferenceDispersionForce::*CombiningFunction)( RealOpenMM x, RealOpenMM y) const;
@@ -136,6 +143,8 @@ public:
     
     RealVec getPeriodicBox( void ) const;
 
+    void setDispersionParameters( const c6d6Datatype& c6d6Data);
+
     /**---------------------------------------------------------------------------------------
     
        Calculate Dispersion ixn using neighbor list
@@ -154,7 +163,7 @@ public:
        --------------------------------------------------------------------------------------- */
     
     RealOpenMM calculateForceAndEnergy( int numParticles, const std::vector<OpenMM::RealVec>& particlePositions, 
-                                        const std::vector<std::vector<int> >& allParticleIndices,
+            const std::vector<string>& allParticleElements,
                                         const NeighborList& neighborList,
                                         std::vector<OpenMM::RealVec>& forces ) const;
          
@@ -164,6 +173,9 @@ private:
     double _cutoff;
 
     RealVec _periodicBoxDimensions;
+
+    // example = {("O", "H"):(1.234, 2.345)}
+    c6d6Datatype _c6d6Data;
 
     /**---------------------------------------------------------------------------------------
 
@@ -180,9 +192,9 @@ private:
        --------------------------------------------------------------------------------------- */
 
     RealOpenMM calculatePairIxn( int siteI, int siteJ,
-                                                          const std::vector<RealVec> & particlePositions,
-                                                          const std::vector<std::vector<int> >& allParticleIndices,
-                                                          std::vector<RealVec>& forces ) const;
+                                                          const std::vector<RealVec>& particlePositions,
+                                                          const std::vector<string>& allParticleElements,
+                                                          vector<RealVec>& forces ) const;
 };
 
 // ---------------------------------------------------------------------------------------

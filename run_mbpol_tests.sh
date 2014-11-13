@@ -11,3 +11,4 @@ eval $TEST_FOLDER/TestReferenceMBPolTwoBodyForce
 eval $TEST_FOLDER/TestReferenceMBPolThreeBodyForce
 eval $TEST_FOLDER/TestReferenceMBPolDispersionForce
 eval $TEST_FOLDER/TestReferenceMBPolIntegrationTest
+eval $TEST_FOLDER/TestReferenceMBPol14WaterTest

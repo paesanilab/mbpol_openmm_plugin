@@ -1,5 +1,16 @@
 %module mbpolplugin
 
+%include "std_string.i"
+%include "typemaps.i"
+%include "std_vector.i"
+namespace std {
+  %template(vectord) vector<double>;
+  %template(vectorddd) vector< vector< vector<double> > >;
+  %template(vectori) vector<int>;
+  %template(vectorii) vector < vector<int> >;
+  %template(vectorstring) vector<string>;
+};
+
 %import(module="simtk.openmm") "OpenMMSwigHeaders.i"
 
 %{
@@ -16,17 +27,6 @@
 %feature("autodoc", "1");
 %nodefaultctor;
 
-%include "std_string.i"
-%include "typemaps.i"
-%include "std_vector.i"
-namespace std {
-  %template(vectord) vector<double>;
-  %template(vectorddd) vector< vector< vector<double> > >;
-  %template(vectori) vector<int>;
-  %template(vectorii) vector < vector<int> >;
-  %template(vectorstring) vector<string>;
-};
-
 
 using namespace OpenMM;
 
@@ -37,6 +37,10 @@ public:
     MBPolElectrostaticsForce();
 
     int getNumElectrostatics() const;
+
+    enum NonbondedMethod { NoCutoff, PME };
+
+    void setNonbondedMethod(NonbondedMethod method);
 
     double getCutoffDistance(void) const;
 
@@ -159,22 +163,18 @@ public:
     MBPolDispersionForce();
 
     int getNumParticles() const;
+    void setParticleParameters(int particleIndex, std::string atomElement);
 
-    void setParticleParameters(int particleIndex, std::vector<int>& particleIndices);
+    void getParticleParameters(int particleIndex, std::string & atomElement) const;
 
-    void getParticleParameters(int particleIndex, std::vector<int>& particleIndices) const;
+    int addParticle(std::string atomElement);
 
-    int addParticle(const std::vector<int> & particleIndices);
+    void addDispersionParameters(std::string firstElement, std::string secondElement, double c6, double d6);
 
     int getNumMolecules(void) const;
     void setCutoff(double cutoff);
 
     double getCutoff(void) const;
-
-    // NonbondedMethod getNonbondedMethod() const;
-    // void setNonbondedMethod(NonbondedMethod method);
-
-    void updateParametersInContext(Context& context);
 
 };
 
