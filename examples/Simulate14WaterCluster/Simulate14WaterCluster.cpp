@@ -79,12 +79,7 @@ void simulate14WaterCluster() {
     MBPolElectrostaticsForce* mbpolElectrostaticsForce        = new MBPolElectrostaticsForce();;
     mbpolElectrostaticsForce->setNonbondedMethod( MBPolElectrostaticsForce::NoCutoff );
 
-    std::vector<double> zeroDipole(3);
-    std::vector<double> zeroQuadrupole(9);
     std::vector<double> thole(5);
-
-    std::fill(zeroDipole.begin(), zeroDipole.end(), 0.);
-    std::fill(zeroQuadrupole.begin(), zeroQuadrupole.end(), 0.);
 
     thole[TCC] = 0.4;
     thole[TCD] = 0.4;
@@ -234,12 +229,20 @@ void simulate14WaterCluster() {
         }
 
 
-        mbpolOneBodyForce->addOneBody(jj, jj+1, jj+2);
+        mbpolOneBodyForce->addOneBody(particleIndices);
         mbpolTwoBodyForce->addParticle( particleIndices);
         mbpolThreeBodyForce->addParticle( particleIndices);
-        dispersionForce->addParticle( particleIndices);
+        dispersionForce->addParticle( "O");
+        dispersionForce->addParticle( "H");
+        dispersionForce->addParticle( "H");
+        dispersionForce->addParticle( "M");
 
     }
+
+    // <!-- Units: c6 [kJ mol^{-1} nm^{-6}], d6 [nm^{-1}] -->
+    dispersionForce->addDispersionParameters("O", "O", 9.92951990e+08, 9.29548582e+01);
+    dispersionForce->addDispersionParameters("O", "H", 3.49345451e+08, 9.77520243e+01);
+    dispersionForce->addDispersionParameters("H", "H", 8.40715638e+07, 9.40647517e+01);
 
     system.addForce(mbpolElectrostaticsForce);
     system.addForce(mbpolOneBodyForce);

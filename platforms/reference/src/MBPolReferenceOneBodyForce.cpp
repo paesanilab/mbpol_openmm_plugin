@@ -22,10 +22,10 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "MBPolReferenceForce.h"
 #include "MBPolReferenceOneBodyForce.h"
 #include <vector>
 #include "mbpol_interaction_constants.h"
+#include "MBPolReferenceTwoBodyForce.h"
 
 using std::vector;
 using OpenMM::RealVec;
@@ -41,6 +41,29 @@ using OpenMM::RealVec;
    @return energy
 
    --------------------------------------------------------------------------------------- */
+
+
+MBPolReferenceOneBodyForce::MBPolReferenceOneBodyForce( ) : _nonbondedMethod(NonPeriodic) {
+
+    _periodicBoxDimensions = RealVec( 0.0, 0.0, 0.0 );
+}
+
+void MBPolReferenceOneBodyForce::setPeriodicBox( const RealVec& box ){
+    _periodicBoxDimensions = box;
+}
+
+RealVec MBPolReferenceOneBodyForce::getPeriodicBox( void ) const {
+    return _periodicBoxDimensions;
+}
+
+
+MBPolReferenceOneBodyForce::NonbondedMethod MBPolReferenceOneBodyForce::getNonbondedMethod( void ) const {
+    return _nonbondedMethod;
+}
+
+void MBPolReferenceOneBodyForce::setNonbondedMethod( MBPolReferenceOneBodyForce::NonbondedMethod nonbondedMethod ){
+    _nonbondedMethod = nonbondedMethod;
+}
 
 
 double MBPolReferenceOneBodyForce::calculateOneBodyIxn(const RealVec& positionO, const RealVec& positionH1, const RealVec& positionH2,
@@ -153,52 +176,45 @@ double MBPolReferenceOneBodyForce::calculateOneBodyIxn(const RealVec& positionO,
 
     const double dVcdcth = efac*sum3;
 
+    double cal2joule = 4.184;
+
+    double fH1, fH2;
+
     for (size_t i = 0; i < 3; ++i) {
         // H1
-        forceH1[i] = dVa1*ROH1[i] + dVb*RHH[i] + dVcdr1*ROH1[i]
-        + dVcdcth*(ROH2[i]/(dROH1*dROH2) - costh*ROH1[i]/(dROH1*dROH1));
-        // H2
-        forceH2[i] = dVa2*ROH2[i] - dVb*RHH[i] + dVcdr2*ROH2[i]
-        + dVcdcth*(ROH1[i]/(dROH1*dROH2) - costh*ROH2[i]/(dROH2*dROH2));
-        // O
-        forceO[i] = -(forceH1[i] + forceH2[i]);
-    }
 
-    double cal2joule = 4.184;
-    for (size_t i = 0; i < 3; ++i)
-    { // added *10 A -> nm
-        forceH1[i] *= cm1_kcalmol * cal2joule * 10.; // cm-1 --> Kcal/mol
-        forceH2[i] *= cm1_kcalmol * cal2joule * 10.; // cm-1 --> Kcal/mol
-        forceO[i] *= cm1_kcalmol  * cal2joule * 10; // cm-1 --> Kcal/mol
+        fH1 = (dVa1*ROH1[i] + dVb*RHH[i] + dVcdr1*ROH1[i]
+        + dVcdcth*(ROH2[i]/(dROH1*dROH2) - costh*ROH1[i]/(dROH1*dROH1))) * cm1_kcalmol  * cal2joule * 10;
+
+        forceH1[i] -= fH1;
+
+        fH2 = (dVa2*ROH2[i] - dVb*RHH[i] + dVcdr2*ROH2[i]
+        + dVcdcth*(ROH1[i]/(dROH1*dROH2) - costh*ROH2[i]/(dROH2*dROH2))) * cm1_kcalmol  * cal2joule * 10;
+
+        // H2
+        forceH2[i] -= fH2;
+
+        // O
+        forceO[i] -= -(fH1 + fH2);
     }
     return e1 * cal2joule;
 }
 
 
-RealOpenMM MBPolReferenceOneBodyForce::calculateForceAndEnergy( int numOneBodys, vector<RealVec>& posData,
-                                                                       const std::vector<int>&  particleO,
-                                                                       const std::vector<int>&  particleH1,
-                                                                       const std::vector<int>&  particleH2,
-                                                                       const std::vector<RealOpenMM>& lengthABParameters,
-                                                                       const std::vector<RealOpenMM>& lengthCBParameters,
-                                                                       const std::vector<RealOpenMM>&  angle,
-                                                                       const std::vector<RealOpenMM>&  kQuadratic,
-                                                                       vector<RealVec>& forceData) const {
+RealOpenMM MBPolReferenceOneBodyForce::calculateForceAndEnergy( int numOneBodys, const std::vector<RealVec>& particlePositions, const std::vector<std::vector<int> >& allParticleIndices,
+                                                                       vector<RealVec>& forces) const {
     RealOpenMM energy      = 0.0; 
     for (unsigned int ii = 0; ii < static_cast<unsigned int>(numOneBodys); ii++) {
-        int particleOIndex      = particleO[ii];
-        int particleH1Index      = particleH1[ii];
-        int particleH2Index      = particleH2[ii];
-        RealVec forceO, forceH1, forceH2;
-        energy                 +=  calculateOneBodyIxn(posData[particleOIndex], posData[particleH1Index], posData[particleH2Index], forceO, forceH1, forceH2);
+        std::vector<RealVec> allPositions;
 
-        // accumulate forces
-    
-        for( int jj = 0; jj < 3; jj++ ){
-            forceData[particleOIndex][jj] -=  forceO[jj];
-            forceData[particleH1Index][jj] -= forceH1[jj];
-            forceData[particleH2Index][jj] -= forceH2[jj];
-        }
+        for (unsigned int i=0; i < 3; i++)
+            allPositions.push_back(particlePositions[allParticleIndices[ii][i]]);
+
+        if( _nonbondedMethod == Periodic )
+            imageMolecules(_periodicBoxDimensions, allPositions);
+
+        energy                 +=  calculateOneBodyIxn(allPositions[0], allPositions[1], allPositions[2],
+                forces[allParticleIndices[ii][0]], forces[allParticleIndices[ii][1]], forces[allParticleIndices[ii][2]]);
 
     }   
     return energy;

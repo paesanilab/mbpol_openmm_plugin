@@ -35,13 +35,26 @@
 #include "openmm/internal/ForceImpl.h"
 #include "openmm/MBPolDispersionForce.h"
 #include "openmm/Kernel.h"
+#include "openmm/System.h"
 #include <utility>
 #include <set>
 #include <string>
 
-namespace MBPolPlugin {
+template <int N>
+struct Factorial
+{
+    enum { value = N * Factorial<N - 1>::value };
+};
 
-class System;
+template <>
+struct Factorial<0>
+{
+    enum { value = 1 };
+};
+
+double tang_toennies(const int n, const double& x);
+
+namespace MBPolPlugin {
 
 /**
  * This is the internal implementation of MBPolDispersionForce.
@@ -63,7 +76,7 @@ public:
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
-
+    static double calcDispersionCorrection(const System& system, const MBPolDispersionForce& force);
 
     void updateParametersInContext(ContextImpl& context);
 private:

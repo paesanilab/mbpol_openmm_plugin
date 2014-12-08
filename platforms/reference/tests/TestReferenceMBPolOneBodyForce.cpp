@@ -68,7 +68,12 @@ void testOneOneBody( FILE* log ) {
     //double kOneBody     = 0.750491578E-01;
     double kOneBody     = 1.0;
 
-    mbpolOneBodyForce->addOneBody(0, 1, 2);
+    std::vector<int> particleIndices;
+    particleIndices.push_back(0);
+    particleIndices.push_back(1);
+    particleIndices.push_back(2);
+
+    mbpolOneBodyForce->addOneBody(particleIndices);
 
     system.addForce(mbpolOneBodyForce);
     Context context(system, integrator, Platform::getPlatformByName( "Reference"));

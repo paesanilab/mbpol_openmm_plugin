@@ -26,6 +26,7 @@
 
 #include <vector>
 #include "openmm/reference/RealVec.h"
+#include "openmm/reference/SimTKOpenMMRealType.h"
 #include "openmm/MBPolElectrostaticsForce.h"
 #include <map>
 #include "openmm/reference/fftpack.h"
@@ -1131,6 +1132,28 @@ public:
      */
      void setPeriodicBoxSize( RealVec& boxSize );
 
+protected:
+
+     /**
+      * Resize PME arrays.
+      *
+      */
+     void resizePmeArrays( void );
+
+
+     /**
+      * Calculate direct space electrostatic interaction between particles I and J.
+      *
+      * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
+      * @param particleJ         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle J
+      * @param scalingFactors    scaling factors for interaction
+      * @param forces            vector of particle forces to be updated
+      * @param torques           vector of particle torques to be updated
+      */
+     RealOpenMM calculatePmeDirectElectrostaticPairIxn( const ElectrostaticsParticleData& particleI, const ElectrostaticsParticleData& particleJ,
+                                                        std::vector<RealVec>& forces, std::vector<RealVec>& torques ) const;
+
+
 private:
 
     static const int MBPOL_PME_ORDER;
@@ -1163,11 +1186,7 @@ private:
     std::vector<RealOpenMM4> _pmeBsplineTheta;
     std::vector<RealOpenMM4> _pmeBsplineDtheta;
 
-    /**
-     * Resize PME arrays.
-     * 
-     */
-    void resizePmeArrays( void );
+
 
     /**
      * Zero Pme grid.
@@ -1198,10 +1217,12 @@ private:
      * @param dampedDInverseDistances damped inverse distances (drr3,drr5,drr7 in udirect2a() in TINKER)
      * @param dampedPInverseDistances damped inverse distances (prr3,prr5,prr7 in udirect2a() in TINKER)
      */
-    void getDampedInverseDistances( const ElectrostaticsParticleData& particleI, const ElectrostaticsParticleData& particleJ,
-                                    RealOpenMM dscale, RealOpenMM pscale, RealOpenMM r,
-                                    RealVec& dampedDInverseDistances, RealVec& dampedPInverseDistances ) const;
-    
+    void getDampedInverseDistances( const ElectrostaticsParticleData& particleI,
+                                                                  const ElectrostaticsParticleData& particleJ,
+                                                                  RealOpenMM dscale, RealOpenMM pscale, RealOpenMM r,
+                                                                  std::vector<RealOpenMM>& dampedDInverseDistances,
+                                                                  std::vector<RealOpenMM>& dampedPInverseDistances ) const;
+
     /**
      * Initialize B-spline moduli.
      * 
@@ -1413,19 +1434,6 @@ private:
      * @param torques                 vector of torques
      */
     void calculatePmeSelfTorque( const std::vector<ElectrostaticsParticleData>& particleData, std::vector<RealVec>& torques ) const;
-
-    /**
-     * Calculate direct space electrostatic interaction between particles I and J.
-     * 
-     * @param particleI         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle I
-     * @param particleJ         positions and parameters (charge, labFrame dipoles, quadrupoles, ...) for particle J
-     * @param scalingFactors    scaling factors for interaction
-     * @param forces            vector of particle forces to be updated
-     * @param torques           vector of particle torques to be updated
-     */
-    RealOpenMM calculatePmeDirectElectrostaticPairIxn( const ElectrostaticsParticleData& particleI, const ElectrostaticsParticleData& particleJ,
-                                                       const std::vector<RealOpenMM>& scalingFactors,
-                                                       std::vector<RealVec>& forces, std::vector<RealVec>& torques ) const;
 
     /**
      * Calculate reciprocal space energy/force/torque for dipole interaction.

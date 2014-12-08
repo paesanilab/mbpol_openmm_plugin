@@ -36,6 +36,7 @@ namespace MBPolPlugin {
 
 const double nm_to_A = 10.;
 const double cal2joule = 4.184;
+const double kcal_permol_Aminus6_to_kJ_permol_nmminus6 = 4.184e6;
 
 } // namespace MBPolPlugin
 

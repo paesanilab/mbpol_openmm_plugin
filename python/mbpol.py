@@ -1,5 +1,5 @@
 import mbpolplugin
-from simtk.openmm.app import forcefield
+from simtk.openmm import app
 from simtk import unit
 
 ## @private
@@ -14,14 +14,11 @@ class MBPolOneBodyForceGenerator:
     @staticmethod
     def parseElement(element, forceField):
         generator = MBPolOneBodyForceGenerator()
-        forceField._forces.append(generator)
+        forceField.registerGenerator(generator)
 
         # <MBPolOneBodyForce>
         #     <Residue class1="OW" class2="HW" class3="HW" />
         # </MBPolOneBodyForce>
-        # <AmoebaStretchBendForce stretchBendUnit="1.0">
-        # <StretchBend class1="2" class2="1" class3="3" k1="5.25776946506" k2="5.25776946506" />
-        # <StretchBend class1="2" class2="1" class3="4" k1="3.14005676385" k2="3.14005676385" />
 
         for MBPolOneBodyForce_template in element.findall('MBPolOneBodyForce'):
             types = forceField._findAtomTypes(MBPolOneBodyForce_template.attrib, 3)
@@ -40,14 +37,24 @@ class MBPolOneBodyForceGenerator:
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
+        methodMap = {app.NoCutoff:mbpolplugin.MBPolOneBodyForce.NonPeriodic,
+                     app.PME:mbpolplugin.MBPolOneBodyForce.Periodic,
+                     app.CutoffPeriodic:mbpolplugin.MBPolOneBodyForce.Periodic,
+                     app.CutoffNonPeriodic:mbpolplugin.MBPolOneBodyForce.NonPeriodic}
+
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mbpolplugin.MBPolOneBodyForce]
+
+        if nonbondedMethod not in methodMap:
+            raise ValueError('Illegal nonbonded method for MBPolOneBodyForce')
 
         if len(existing) == 0:
             force = mbpolplugin.MBPolOneBodyForce()
             sys.addForce(force)
         else:
             force = existing[0]
+
+        force.setNonbondedMethod(methodMap[nonbondedMethod])
 
         for i in range(len(data.angles)):
             angle = data.angles[i]
@@ -56,9 +63,13 @@ class MBPolOneBodyForceGenerator:
             atom3 = data.atoms[angle[2]]
             if atom1.residue.name == 'HOH' and atom2.residue.name == 'HOH' and atom3.residue.name == 'HOH':
                 # FIXME loop through all residues of MBPolOneBodyForce and match their name
-                force.addOneBody(atom2.index, atom1.index, atom3.index)
+                v = mbpolplugin.vectori()
+                v.push_back(atom2.index)
+                v.push_back(atom1.index)
+                v.push_back(atom3.index)
+                force.addOneBody(v);
 
-forcefield.parsers["MBPolOneBodyForce"] = MBPolOneBodyForceGenerator.parseElement
+app.forcefield.parsers["MBPolOneBodyForce"] = MBPolOneBodyForceGenerator.parseElement
 
 ## @private
 class MBPolTwoBodyForceGenerator:
@@ -72,14 +83,11 @@ class MBPolTwoBodyForceGenerator:
     @staticmethod
     def parseElement(element, forceField):
         generator = MBPolTwoBodyForceGenerator()
-        forceField._forces.append(generator)
+        forceField.registerGenerator(generator)
 
         # <MBPolTwoBodyForce>
         #     <Residue class1="OW" class2="HW" class3="HW" />
         # </MBPolTwoBodyForce>
-        # <AmoebaStretchBendForce stretchBendUnit="1.0">
-        # <StretchBend class1="2" class2="1" class3="3" k1="5.25776946506" k2="5.25776946506" />
-        # <StretchBend class1="2" class2="1" class3="4" k1="3.14005676385" k2="3.14005676385" />
 
         for MBPolTwoBodyForce_template in element.findall('MBPolTwoBodyForce'):
             types = forceField._findAtomTypes(MBPolTwoBodyForce_template, 3)
@@ -98,6 +106,14 @@ class MBPolTwoBodyForceGenerator:
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
+        methodMap = {app.NoCutoff:mbpolplugin.MBPolTwoBodyForce.NoCutoff,
+                     app.PME:mbpolplugin.MBPolTwoBodyForce.CutoffPeriodic,
+                     app.CutoffPeriodic:mbpolplugin.MBPolTwoBodyForce.CutoffPeriodic,
+                     app.CutoffNonPeriodic:mbpolplugin.MBPolTwoBodyForce.CutoffNonPeriodic}
+
+        if nonbondedMethod not in methodMap:
+            raise ValueError('Illegal nonbonded method for MBPolTwoBodyForce')
+
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mbpolplugin.MBPolTwoBodyForce]
 
@@ -107,6 +123,8 @@ class MBPolTwoBodyForceGenerator:
             sys.addForce(force)
         else:
             force = existing[0]
+
+        force.setNonbondedMethod(methodMap[nonbondedMethod])
 
         for i in range(len(data.angles)):
             angle = data.angles[i]
@@ -122,7 +140,7 @@ class MBPolTwoBodyForceGenerator:
 
                 force.addParticle(v)
 
-forcefield.parsers["MBPolTwoBodyForce"] = MBPolTwoBodyForceGenerator.parseElement
+app.forcefield.parsers["MBPolTwoBodyForce"] = MBPolTwoBodyForceGenerator.parseElement
 
 ## @private
 class MBPolThreeBodyForceGenerator:
@@ -136,14 +154,11 @@ class MBPolThreeBodyForceGenerator:
     @staticmethod
     def parseElement(element, forceField):
         generator = MBPolThreeBodyForceGenerator()
-        forceField._forces.append(generator)
+        forceField.registerGenerator(generator)
 
         # <MBPolThreeBodyForce>
         #     <Residue class1="OW" class2="HW" class3="HW" />
         # </MBPolThreeBodyForce>
-        # <AmoebaStretchBendForce stretchBendUnit="1.0">
-        # <StretchBend class1="2" class2="1" class3="3" k1="5.25776946506" k2="5.25776946506" />
-        # <StretchBend class1="2" class2="1" class3="4" k1="3.14005676385" k2="3.14005676385" />
 
         for MBPolThreeBodyForce_template in element.findall('MBPolThreeBodyForce'):
             types = forceField._findAtomTypes(MBPolThreeBodyForce_template.attrib, 3)
@@ -162,6 +177,14 @@ class MBPolThreeBodyForceGenerator:
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
+        methodMap = {app.NoCutoff:mbpolplugin.MBPolThreeBodyForce.NoCutoff,
+                     app.PME:mbpolplugin.MBPolThreeBodyForce.CutoffPeriodic,
+                     app.CutoffPeriodic:mbpolplugin.MBPolThreeBodyForce.CutoffPeriodic,
+                     app.CutoffNonPeriodic:mbpolplugin.MBPolThreeBodyForce.CutoffNonPeriodic}
+
+        if nonbondedMethod not in methodMap:
+            raise ValueError('Illegal nonbonded method for MBPolThreeBodyForce')
+
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mbpolplugin.MBPolThreeBodyForce]
 
@@ -171,6 +194,8 @@ class MBPolThreeBodyForceGenerator:
             sys.addForce(force)
         else:
             force = existing[0]
+
+        force.setNonbondedMethod(methodMap[nonbondedMethod])
 
         for i in range(len(data.angles)):
             angle = data.angles[i]
@@ -186,7 +211,7 @@ class MBPolThreeBodyForceGenerator:
 
                 force.addParticle(v)
 
-forcefield.parsers["MBPolThreeBodyForce"] = MBPolThreeBodyForceGenerator.parseElement
+app.forcefield.parsers["MBPolThreeBodyForce"] = MBPolThreeBodyForceGenerator.parseElement
 
 ## @private
 class MBPolDispersionForceGenerator:
@@ -196,21 +221,22 @@ class MBPolDispersionForceGenerator:
         self.types1 = []
         self.types2 = []
         self.types3 = []
+        self.parameters = dict()
 
     @staticmethod
     def parseElement(element, forceField):
         generator = MBPolDispersionForceGenerator()
-        forceField._forces.append(generator)
+        forceField.registerGenerator(generator)
 
         # <MBPolDispersionForce>
-        #     <Residue class1="OW" class2="HW" class3="HW" />
+        #     <Residue name="HOH" class1="O" class2="H" class3="H" />
+        #     <Parameters class1="O" class2="O" c6="9.92951990e+08" d6="9.29548582e+01" />
+        #     <Parameters class1="O" class2="H" c6="3.49345451e+08" d6="9.77520243e+01" />
+        #     <Parameters class1="H" class2="H" c6="8.40715638e+07" d6="9.40647517e+01" />
         # </MBPolDispersionForce>
-        # <AmoebaStretchBendForce stretchBendUnit="1.0">
-        # <StretchBend class1="2" class2="1" class3="3" k1="5.25776946506" k2="5.25776946506" />
-        # <StretchBend class1="2" class2="1" class3="4" k1="3.14005676385" k2="3.14005676385" />
 
-        for MBPolDispersionForce_template in element.findall('MBPolDispersionForce'):
-            types = forceField._findAtomTypes(MBPolDispersionForce_template.attrib, 3)
+        for residue in element.findall('Residue'):
+            types = forceField._findAtomTypes(residue.attrib, 3)
             if None not in types:
 
                 generator.types1.append(types[0])
@@ -219,12 +245,21 @@ class MBPolDispersionForceGenerator:
 
             else:
                 outputString = self.__class__ + ": error getting types: %s %s %s" % (
-                                    MBPolDispersionForce_template.attrib['class1'],
-                                    MBPolDispersionForce_template.attrib['class2'],
-                                    MBPolDispersionForce_template.attrib['class3'])
+                                    residue.attrib['class1'],
+                                    residue.attrib['class2'],
+                                    residue.attrib['class3'])
                 raise ValueError(outputString)
 
+        for parameter in element.findall('Parameters'):
+            generator.parameters[(parameter.attrib['class1'], parameter.attrib['class2'])] = \
+                (float(parameter.attrib['c6']), float(parameter.attrib['d6']))
+
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
+
+        methodMap = {app.NoCutoff:mbpolplugin.MBPolDispersionForce.NoCutoff,
+                     app.PME:mbpolplugin.MBPolDispersionForce.CutoffPeriodic,
+                     app.CutoffPeriodic:mbpolplugin.MBPolDispersionForce.CutoffPeriodic,
+                     app.CutoffNonPeriodic:mbpolplugin.MBPolDispersionForce.CutoffNonPeriodic}
 
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mbpolplugin.MBPolDispersionForce]
@@ -236,21 +271,19 @@ class MBPolDispersionForceGenerator:
         else:
             force = existing[0]
 
-        for i in range(len(data.angles)):
-            angle = data.angles[i]
-            atom1 = data.atoms[angle[0]]
-            atom2 = data.atoms[angle[1]]
-            atom3 = data.atoms[angle[2]]
-            if atom1.residue.name == 'HOH' and atom2.residue.name == 'HOH' and atom3.residue.name == 'HOH':
-                # FIXME loop through all residues of MBPolDispersionForce and match their name
-                v = mbpolplugin.vectori()
-                v.push_back(atom2.index)
-                v.push_back(atom1.index)
-                v.push_back(atom3.index)
+        force.setNonbondedMethod(methodMap[nonbondedMethod])
 
-                force.addParticle(v)
+        for atom in data.atoms:
+            if atom.element:
+                force.addParticle(atom.element.symbol)
+            else:
+                # virtual site
+                force.addParticle('M')
 
-forcefield.parsers["MBPolDispersionForce"] = MBPolDispersionForceGenerator.parseElement
+        for elements, c6d6 in self.parameters.items():
+            force.addDispersionParameters(elements[0], elements[1], c6d6[0], c6d6[1])
+
+app.forcefield.parsers["MBPolDispersionForce"] = MBPolDispersionForceGenerator.parseElement
 
 ## @private
 class MBPolElectrostaticsForceGenerator:
@@ -273,7 +306,7 @@ class MBPolElectrostaticsForceGenerator:
         # </MBPolElectrostaticsForce>
 
         generator = MBPolElectrostaticsForceGenerator()
-        forceField._forces.append(generator)
+        forceField.registerGenerator(generator)
 
         for MBPolElectrostaticsForce_template in element.findall('MBPolElectrostaticsForce'):
             types = forceField._findAtomTypes(MBPolElectrostaticsForce_template.attrib, 3)
@@ -319,6 +352,13 @@ class MBPolElectrostaticsForceGenerator:
 
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
 
+        # CutoffNonPeriodic defaults to NoCutoff
+        methodMap = {app.NoCutoff:mbpolplugin.MBPolElectrostaticsForce.NoCutoff,
+                     app.CutoffNonPeriodic:mbpolplugin.MBPolElectrostaticsForce.NoCutoff,
+                     app.PME:mbpolplugin.MBPolElectrostaticsForce.PME}
+        if nonbondedMethod not in methodMap:
+            raise ValueError('Illegal nonbonded method for MBPolElectrostaticsForce')
+
         existing = [sys.getForce(i) for i in range(sys.getNumForces())]
         existing = [f for f in existing if type(f) == mbpolplugin.MBPolElectrostaticsForce]
 
@@ -327,6 +367,8 @@ class MBPolElectrostaticsForceGenerator:
             sys.addForce(force)
         else:
             force = existing[0]
+
+        force.setNonbondedMethod(methodMap[nonbondedMethod])
 
         for i in range(len(data.angles)):
             angle = data.angles[i]
@@ -347,4 +389,4 @@ class MBPolElectrostaticsForceGenerator:
                 else:
                     raise ValueError('No type for atom %s %s %d' % (atom.name, atom.residue.name, atom.residue.index))
 
-forcefield.parsers["MBPolElectrostaticsForce"] = MBPolElectrostaticsForceGenerator.parseElement
+app.forcefield.parsers["MBPolElectrostaticsForce"] = MBPolElectrostaticsForceGenerator.parseElement

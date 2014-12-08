@@ -40,21 +40,24 @@ using namespace MBPolPlugin;
 MBPolOneBodyForce::MBPolOneBodyForce() {
 }
 
-int MBPolOneBodyForce::addOneBody(int particle1, int particle2, int particle3   ) {
-    stretchBends.push_back(OneBodyInfo(particle1, particle2, particle3));
+int MBPolOneBodyForce::addOneBody(const std::vector<int> & particleIndices    ) {
+    stretchBends.push_back(OneBodyInfo(particleIndices));
     return stretchBends.size()-1;
 }
 
-void MBPolOneBodyForce::getOneBodyParameters(int index, int& particle1, int& particle2, int& particle3) const {
-    particle1       = stretchBends[index].particle1;
-    particle2       = stretchBends[index].particle2;
-    particle3       = stretchBends[index].particle3;
+void MBPolOneBodyForce::getOneBodyParameters(int particleIndex, std::vector<int>& particleIndices ) const {
+    particleIndices     = stretchBends[particleIndex].particleIndices;
+}
+void MBPolOneBodyForce::setOneBodyParameters(int index, std::vector<int>& particleIndices  ) {
+    stretchBends[index].particleIndices =particleIndices;
 }
 
-void MBPolOneBodyForce::setOneBodyParameters(int index, int particle1, int particle2, int particle3) {
-    stretchBends[index].particle1  = particle1;
-    stretchBends[index].particle2  = particle2;
-    stretchBends[index].particle3  = particle3;
+MBPolOneBodyForce::NonbondedMethod MBPolOneBodyForce::getNonbondedMethod() const {
+    return nonbondedMethod;
+}
+
+void MBPolOneBodyForce::setNonbondedMethod(NonbondedMethod method) {
+    nonbondedMethod = method;
 }
 
 ForceImpl* MBPolOneBodyForce::createImpl() const {

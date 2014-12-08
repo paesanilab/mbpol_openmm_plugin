@@ -1,5 +1,16 @@
 %module mbpolplugin
 
+%include "std_string.i"
+%include "typemaps.i"
+%include "std_vector.i"
+namespace std {
+  %template(vectord) vector<double>;
+  %template(vectorddd) vector< vector< vector<double> > >;
+  %template(vectori) vector<int>;
+  %template(vectorii) vector < vector<int> >;
+  %template(vectorstring) vector<string>;
+};
+
 %import(module="simtk.openmm") "OpenMMSwigHeaders.i"
 
 %{
@@ -16,17 +27,6 @@
 %feature("autodoc", "1");
 %nodefaultctor;
 
-%include "std_string.i"
-%include "typemaps.i"
-%include "std_vector.i"
-namespace std {
-  %template(vectord) vector<double>;
-  %template(vectorddd) vector< vector< vector<double> > >;
-  %template(vectori) vector<int>;
-  %template(vectorii) vector < vector<int> >;
-  %template(vectorstring) vector<string>;
-};
-
 
 using namespace OpenMM;
 
@@ -37,6 +37,10 @@ public:
     MBPolElectrostaticsForce();
 
     int getNumElectrostatics() const;
+
+    enum NonbondedMethod { NoCutoff, PME };
+
+    void setNonbondedMethod(NonbondedMethod method);
 
     double getCutoffDistance(void) const;
 
@@ -96,11 +100,15 @@ public:
 
     int getNumOneBodys() const;
 
-    int addOneBody(int particle1, int particle2, int particle3);
+    enum NonbondedMethod { Periodic, NonPeriodic };
 
-    void getOneBodyParameters(int index, int& particle1, int& particle2, int& particle3 ) const;
+    void setNonbondedMethod(NonbondedMethod method);
+    NonbondedMethod getNonbondedMethod() const;
 
-    void setOneBodyParameters(int index, int particle1, int particle2, int particle3 );
+    int addOneBody(const std::vector<int> & particleIndices);
+
+    void getOneBodyParameters(int particleIndex, std::vector<int>& particleIndices ) const;
+    void setOneBodyParameters(int index, std::vector<int>& particleIndices  );
 
     void updateParametersInContext(Context& context);
 
@@ -123,9 +131,11 @@ public:
 
     double getCutoff(void) const;
 
-    // NonbondedMethod getNonbondedMethod() const;
 
-    // void setNonbondedMethod(NonbondedMethod method);
+    enum NonbondedMethod { NoCutoff, CutoffPeriodic, CutoffNonPeriodic };
+
+    NonbondedMethod getNonbondedMethod() const;
+    void setNonbondedMethod(NonbondedMethod method);
 
     void updateParametersInContext(Context& context);
 
@@ -148,8 +158,11 @@ public:
 
     double getCutoff(void) const;
 
-    //NonbondedMethod getNonbondedMethod() const;
-    // void setNonbondedMethod(NonbondedMethod method);
+    enum NonbondedMethod { NoCutoff, CutoffPeriodic, CutoffNonPeriodic };
+
+
+    NonbondedMethod getNonbondedMethod() const;
+    void setNonbondedMethod(NonbondedMethod method);
 
     void updateParametersInContext(Context& context);
 };
@@ -159,22 +172,22 @@ public:
     MBPolDispersionForce();
 
     int getNumParticles() const;
+    void setParticleParameters(int particleIndex, std::string atomElement);
 
-    void setParticleParameters(int particleIndex, std::vector<int>& particleIndices);
+    enum NonbondedMethod { NoCutoff, CutoffPeriodic, CutoffNonPeriodic };
+    NonbondedMethod getNonbondedMethod() const;
+    void setNonbondedMethod(NonbondedMethod method);
 
-    void getParticleParameters(int particleIndex, std::vector<int>& particleIndices) const;
+    void getParticleParameters(int particleIndex, std::string & atomElement) const;
 
-    int addParticle(const std::vector<int> & particleIndices);
+    int addParticle(std::string atomElement);
+
+    void addDispersionParameters(std::string firstElement, std::string secondElement, double c6, double d6);
 
     int getNumMolecules(void) const;
     void setCutoff(double cutoff);
 
     double getCutoff(void) const;
-
-    // NonbondedMethod getNonbondedMethod() const;
-    // void setNonbondedMethod(NonbondedMethod method);
-
-    void updateParametersInContext(Context& context);
 
 };
 

@@ -39,24 +39,37 @@ using namespace MBPolPlugin;
 using std::string;
 using std::vector;
 
+using std::map;
+using std::make_pair;
+using std::pair;
+
+
 MBPolDispersionForce::MBPolDispersionForce() : nonbondedMethod(CutoffNonPeriodic), cutoff(1.0e+10) {
 }
 
-int MBPolDispersionForce::addParticle(const std::vector<int> & particleIndices ) {
-    parameters.push_back(DispersionInfo(particleIndices));
+int MBPolDispersionForce::addParticle(string atomElement ) {
+    parameters.push_back(DispersionInfo(atomElement));
     return parameters.size()-1;
+}
+
+void MBPolDispersionForce::addDispersionParameters(string firstElement, string secondElement, double c6, double d6){
+    c6d6Data[make_pair(firstElement, secondElement)] = make_pair(c6, d6);
+}
+
+c6d6Datatype MBPolDispersionForce::getDispersionParameters( void ) const{
+    return c6d6Data;
 }
 
 int MBPolDispersionForce::getNumMolecules() const {
     return parameters.size();
 }
 
-void MBPolDispersionForce::getParticleParameters(int particleIndex, std::vector<int>& particleIndices ) const {
-    particleIndices     = parameters[particleIndex].particleIndices;
+void MBPolDispersionForce::getParticleParameters(int particleIndex, string & atomElement ) const {
+    atomElement = parameters[particleIndex].atomElement;
 }
 
-void MBPolDispersionForce::setParticleParameters(int particleIndex, std::vector<int>& particleIndices  ) {
-      parameters[particleIndex].particleIndices =particleIndices;
+void MBPolDispersionForce::setParticleParameters(int particleIndex, string atomElement  ) {
+      parameters[particleIndex].atomElement = atomElement;
 }
 
 void MBPolDispersionForce::setCutoff( double inputCutoff ){

@@ -28,60 +28,44 @@
 #include "openmm/reference/RealVec.h"
 #include <vector>
 
+using OpenMM::RealVec;
 // ---------------------------------------------------------------------------------------
 
 class MBPolReferenceOneBodyForce {
 
 public:
  
-    /**---------------------------------------------------------------------------------------
-       
-       Constructor
-       
-       --------------------------------------------------------------------------------------- */
- 
-    MBPolReferenceOneBodyForce( ){};
- 
-    /**---------------------------------------------------------------------------------------
-       
-       Destructor
-       
-          --------------------------------------------------------------------------------------- */
+    /**
+     * This is an enumeration of the different methods that may be used for handling long range ThreeBody forces.
+     */
+    enum NonbondedMethod {
+
+        NonPeriodic = 0,
+
+        Periodic = 1,
+    };
+
+    MBPolReferenceOneBodyForce( void );
  
     ~MBPolReferenceOneBodyForce( ){};
 
-     /**---------------------------------------------------------------------------------------
-     
-        Calculate MBPol stretch bend ixns (force and energy)
-     
-        @param numBonds                number of angles
-        @param posData                 particle positions
-        @param particle1               particle 1 indices
-        @param particle2               particle 2 indices
-        @param particle3               particle 3 indices
-        @param lengthABParameters      ideal AB bond length 
-        @param lengthCBParameters      ideal CB bond length 
-        @param angle                   ideal angle 
-        @param kQuadratic              force constant
-        @param forces                  output force vector
-     
-        @return total energy
+    RealOpenMM calculateForceAndEnergy( int numOneBodys, const std::vector<RealVec>& particlePositions, const std::vector<std::vector<int> >& allParticleIndices,
+                                                                           std::vector<RealVec>& forces) const;
 
-     
-        --------------------------------------------------------------------------------------- */
 
-    RealOpenMM calculateForceAndEnergy( int numAngles, std::vector<OpenMM::RealVec>& posData,
-                                        const std::vector<int>& particle1,
-                                        const std::vector<int>&  particle2,
-                                        const std::vector<int>&  particle3,
-                                        const std::vector<RealOpenMM>& lengthABParameters,
-                                        const std::vector<RealOpenMM>& lengthCBParameters,
-                                        const std::vector<RealOpenMM>&  angle,
-                                        const std::vector<RealOpenMM>&  kQuadratic,
-                                        std::vector<OpenMM::RealVec>& forceData ) const;
+    void setPeriodicBox( const RealVec& box );
+
+    RealVec getPeriodicBox( void ) const;
+
+    NonbondedMethod getNonbondedMethod( void ) const;
+
+    void setNonbondedMethod( NonbondedMethod nonbondedMethod );
 
 
 private:
+
+    NonbondedMethod _nonbondedMethod;
+    RealVec _periodicBoxDimensions;
 
     /**---------------------------------------------------------------------------------------
     

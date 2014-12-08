@@ -41,8 +41,6 @@
 
 namespace MBPolPlugin {
 
-class System;
-
 /**
  * This is the internal implementation of MBPolTwoBodyForce.
  */

@@ -32,5 +32,9 @@
     </MBPolThreeBodyForce>
     <MBPolDispersionForce>
         <Residue name="HOH" class1="O" class2="H" class3="H" />
+        <!-- Units: c6 [kJ mol^{-1} nm^{-6}], d6 [nm^{-1}] -->
+        <Parameters class1="O" class2="O" c6="9.92951990e+08" d6="9.29548582e+01" />
+        <Parameters class1="O" class2="H" c6="3.49345451e+08" d6="9.77520243e+01" />
+        <Parameters class1="H" class2="H" c6="8.40715638e+07" d6="9.40647517e+01" />
     </MBPolDispersionForce>
 </ForceField>
