@@ -933,6 +933,8 @@ static void testWater3VirtualSitePMEHugeBox( FILE* log ) {
     MBPolElectrostaticsForce* mbpolElectrostaticsForce        = new MBPolElectrostaticsForce();;
     mbpolElectrostaticsForce->setNonbondedMethod( nonbondedMethod );
     mbpolElectrostaticsForce->setCutoffDistance( cutoff );
+    //mbpolElectrostaticsForce->setIncludeChargeRedistribution(true);
+    mbpolElectrostaticsForce->setIncludeChargeRedistribution(false);
 
     // disable Ewald by setting alpha to very low value
     mbpolElectrostaticsForce->setAEwald( 1e-15 );
@@ -969,10 +971,13 @@ static void testWater3VirtualSitePMEHugeBox( FILE* log ) {
 
     for( unsigned int jj = 0; jj < numberOfParticles; jj += 4 ){
         mbpolElectrostaticsForce->addElectrostatics( -5.1966000e-01, jj+1, jj+2, jj+3,
+                                            //thole, 0.001310, 0.000000 );
                                             thole, 0.001310, 0.001310 );
         mbpolElectrostaticsForce->addElectrostatics(  2.5983000e-01, jj, jj+2, jj+3,
+                                            //thole, 0.000294, 0.000000 );
                                             thole, 0.000294, 0.000294 );
         mbpolElectrostaticsForce->addElectrostatics(  2.5983000e-01, jj, jj+1, jj+3,
+                                            //thole, 0.000294, 0.000000 );
                                             thole, 0.000294, 0.000294 );
         mbpolElectrostaticsForce->addElectrostatics(  0., jj, jj+1, jj+2,
                                                     thole,  0.001310,  0.);
@@ -1103,8 +1108,8 @@ static void testWater3VirtualSitePMEHugeBox( FILE* log ) {
 	    finiteDifferenceForces[i][xyz] /= -1*cal2joule*10;
             positions[i][xyz] = x_orig;
         }
-        std::cout << "Force atom " << i << ": " << expectedForces[i] << " Kcal/mol/A <mbpol>" << std::endl;
         std::cout << "Force atom " << i << ": " << forces[i] << " Kcal/mol/A <openmm-mbpol>" << std::endl;
+        std::cout << "Force atom " << i << ": " << expectedForces[i] << " Kcal/mol/A <isolated monomer mbpol>" << std::endl;
         std::cout << "Force atom " << i << ": " << finiteDifferenceForces[i] << " Kcal/mol/A <openmm-mbpol finite differences>" << std::endl << std::endl;
     }
 
@@ -1158,6 +1163,7 @@ static void testWater3VirtualSitePMESmallBox( FILE* log ) {
     MBPolElectrostaticsForce* mbpolElectrostaticsForce        = new MBPolElectrostaticsForce();;
     mbpolElectrostaticsForce->setNonbondedMethod( nonbondedMethod );
     mbpolElectrostaticsForce->setCutoffDistance( cutoff );
+    //mbpolElectrostaticsForce->setIncludeChargeRedistribution(false);
     mbpolElectrostaticsForce->setIncludeChargeRedistribution(true);
 
     // setting alpha of Ewald to zero triggers automatic estimation of alpha and grid sized based on error tolerance

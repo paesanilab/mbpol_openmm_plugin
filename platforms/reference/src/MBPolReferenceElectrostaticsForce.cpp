@@ -24,6 +24,7 @@
 
 #include "MBPolReferenceElectrostaticsForce.h"
 #include <algorithm>
+#include <iostream>
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
@@ -2770,6 +2771,7 @@ RealOpenMM MBPolReferencePmeElectrostaticsForce::computeReciprocalSpaceFixedElec
         multipole[9] = particleData[i].quadrupole[QYZ]*2.0;
 
         const RealOpenMM* phi = &_phi[20*i];
+#if 0
         torques[i][0] += _electric*(multipole[3]*scale[1]*phi[2] - multipole[2]*scale[2]*phi[3]
                       + 2.0*(multipole[6]-multipole[5])*scale[1]*scale[2]*phi[9]
                       + multipole[8]*scale[0]*scale[1]*phi[7] + multipole[9]*scale[1]*scale[1]*phi[5]
@@ -2796,22 +2798,55 @@ RealOpenMM MBPolReferencePmeElectrostaticsForce::computeReciprocalSpaceFixedElec
         multipole[7] *= scale[0]*scale[1];
         multipole[8] *= scale[0]*scale[2];
         multipole[9] *= scale[1]*scale[2];
+#endif
 
         RealVec f = RealVec( 0.0, 0.0, 0.0);
-        for (int k = 0; k < 10; k++) {
+        for (int k = 0; k < 1; k++) {
+        //for (int k = 0; k < 10; k++) {
             energy += multipole[k]*phi[k];
             f[0]   += multipole[k]*phi[deriv1[k]];
             f[1]   += multipole[k]*phi[deriv2[k]];
             f[2]   += multipole[k]*phi[deriv3[k]];
         }
+
+        //FIXMEGREG
+        // Need to add charge derivatives here
+	// Need to multiply electrostatic potential by the charge derivative
+
+       	// Reciprocal sum, so never the same water
+#if 1
+	if (getIncludeChargeRedistribution()){
+
+//	    std::cerr << i << ' ';
+	    for (size_t s = 0; s < 3; ++s) {
+
+		const int is = particleData[i].otherSiteIndex[s];
+//		std::cerr << is << ' ';
+		const RealOpenMM* phi_s = &_phi[20*is];
+
+		// vsH1f, vsH2f, vsMf
+		//if(particleData[i].otherSiteIndex[s] != jIndex){
+
+		    for (int k = 0; k < 3; ++k){
+//			std::cerr << "i: " << i 
+//			          << ' ' << particleData[i].chargeDerivatives[s][k] 
+//			          << ' ' <<  phi[k] << std::endl;
+			f[k] += particleData[i].chargeDerivatives[s][k] * phi_s[0];
+//			f[k] += particleData[i].chargeDerivatives[s][k] * phi[0];
+		    }
+                //}
+
+	    }
+//	    std::cerr << std::endl;
+	} // charge redistribution
+#endif
+
+
         f[0]           *= scale[0];
         f[1]           *= scale[1];
         f[2]           *= scale[2];
         f              *= (_electric);
         forces[i]      -= f;
-
-        //FIXMEGREG
-        // Need to add charge derivatives here
 
     }
     return (0.5*_electric*energy);
@@ -2854,6 +2889,7 @@ RealOpenMM MBPolReferencePmeElectrostaticsForce::computeReciprocalSpaceInducedDi
         multipole[8] = particleData[i].quadrupole[QXZ]*2.0;
         multipole[9] = particleData[i].quadrupole[QYZ]*2.0;
 
+#if 0
         torques[iIndex][0] += 0.5*_electric*(multipole[3]*scale[1]*_phidp[20*i+2] - multipole[2]*scale[2]*_phidp[20*i+3]
                       + 2.0*(multipole[6]-multipole[5])*scale[1]*scale[2]*_phidp[20*i+9]
                       + multipole[8]*scale[0]*scale[1]*_phidp[20*i+7] + multipole[9]*scale[1]*scale[1]*_phidp[20*i+5]
@@ -2881,6 +2917,7 @@ RealOpenMM MBPolReferencePmeElectrostaticsForce::computeReciprocalSpaceInducedDi
         multipole[7] *= scale[0]*scale[1];
         multipole[8] *= scale[0]*scale[2];
         multipole[9] *= scale[1]*scale[2];
+#endif
 
         inducedDipole[0] = _inducedDipole[i][0];
         inducedDipole[1] = _inducedDipole[i][1];
@@ -2919,6 +2956,7 @@ RealOpenMM MBPolReferencePmeElectrostaticsForce::computeReciprocalSpaceInducedDi
         f[1] *= scale[1];
         f[2] *= scale[2];
 
+	// phidip appears to be always zero when multipole is a charge
         for (int k = 0; k < 10; k++) {
             f[0] += multipole[k]*_phidp[20*i+deriv1[k]];
             f[1] += multipole[k]*_phidp[20*i+deriv2[k]];
@@ -2931,7 +2969,11 @@ RealOpenMM MBPolReferencePmeElectrostaticsForce::computeReciprocalSpaceInducedDi
         f              *= (0.5*_electric);
         forces[iIndex] -= f;
 
-        // FIXMEGREG add charge derivatives
+	// I don't think this portion of the code needs to be modified
+	// for charge derivatives. I think this section for (MB-pol) is 
+	// only the induced dipole * electric field. So if the charge derivatives
+	// do not have to be added to the electric field, this section of the code
+	// should work as is.
     }
 
     return (0.5*_electric*energy);
