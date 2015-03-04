@@ -1,6 +1,5 @@
 typedef struct {
     real x, y, z;
-    real q;
     real fx, fy, fz;
 } AtomData;
 
@@ -15217,7 +15216,6 @@ extern "C" __global__ void computeTwoBodyForce(
                 localData[threadIdx.x].x = posq[j].x;
                 localData[threadIdx.x].y = posq[j].y;
                 localData[threadIdx.x].z = posq[j].z;
-                localData[threadIdx.x].q = posq[j].w;
                 localData[threadIdx.x].fx = 0.0f;
                 localData[threadIdx.x].fy = 0.0f;
                 localData[threadIdx.x].fz = 0.0f;
@@ -15236,7 +15234,7 @@ extern "C" __global__ void computeTwoBodyForce(
                    forces[i] = make_real3(0);
                 }
                 int atom2 = tbx+tj;
-                real4 posq2 = make_real4(localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
+                real3 posq2 = make_real3(localData[atom2].x, localData[atom2].y, localData[atom2].z);
                 real3 delta = make_real3(posq2.x-posq1.x, posq2.y-posq1.y, posq2.z-posq1.z);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
