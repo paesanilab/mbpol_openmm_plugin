@@ -147,21 +147,23 @@ void testTwoBody( double boxDimension, bool addPositionOffset ) {
     for( unsigned int ii = 0; ii < forces.size(); ii++ ){
         forces[ii] /= CalToJoule*10;
         expectedForces[ii] *= -1; // gradient -> forces
-    }    
+    }
 
     double tolerance = 1.0e-03;
 
 
     double energy = state.getPotentialEnergy();// / CalToJoule;
 
-    std::cout << "Energy: " << energy << " J/mol "<< std::endl;
+    std::cout << "Energy: " << energy / CalToJoule << " Kcal/mol "<< std::endl;
     std::cout << "Expected energy: " << expectedEnergy << " Kcal/mol "<< std::endl;
+    std::cout << "Ratio: " << energy / CalToJoule / expectedEnergy * 100 << " % "<< std::endl;
 
     std::cout  << std::endl << "Forces:" << std::endl;
 
     for (int i=0; i<numberOfParticles; i++) {
            std::cout << "Force atom " << i << ": " << expectedForces[i] << " Kcal/mol/A <mbpol>" << std::endl;
-           std::cout << "Force atom " << i << ": " << forces[i] << " Kcal/mol/A <openmm-mbpol>" << std::endl << std::endl;
+           std::cout << "Force atom " << i << ": " << forces[i] << " Kcal/mol/A <openmm-mbpol>" << std::endl;
+           std::cout << "Ratio atom" << i << ": [" << forces[i][0] / expectedForces[i][0] * 100 << ", "  << forces[i][1] / expectedForces[i][1] * 100  <<  ", "  << forces[i][2] / expectedForces[i][2] * 100  << "] % " << std::endl << std::endl;
        }
 
        std::cout << "Comparison of energy and forces with tolerance: " << tolerance << std::endl << std::endl;
