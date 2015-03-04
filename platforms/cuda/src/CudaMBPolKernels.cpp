@@ -187,6 +187,8 @@ void CudaCalcMBPolTwoBodyForceKernel::initialize(const System& system, const MBP
     defines["NUM_BLOCKS"] = cu.intToString(cu.getNumAtomBlocks());
     defines["TILE_SIZE"] = cu.intToString(CudaContext::TileSize);
     defines["THREAD_BLOCK_SIZE"] = cu.intToString(cu.getNonbondedUtilities().getNumForceThreadBlocks());
+    if (useCutoff)
+        defines["USE_CUTOFF"] = "1";
 
     CUmodule module = cu.createModule(CudaKernelSources::vectorOps+CudaMBPolKernelSources::twobodyForce, defines);
     computeTwoBodyForceKernel = cu.getKernel(module, "computeTwoBodyForce");
