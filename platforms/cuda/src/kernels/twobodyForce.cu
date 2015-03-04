@@ -15188,6 +15188,7 @@ extern "C" __global__ void computeTwoBodyForce(
     __shared__ int atomIndices[THREAD_BLOCK_SIZE];
     __shared__ volatile int skipTiles[THREAD_BLOCK_SIZE];
     skipTiles[threadIdx.x] = -1;
+bool debuginternal = false;
 
     while (pos < end) {
         real3 forces[10];
@@ -15268,6 +15269,9 @@ extern "C" __global__ void computeTwoBodyForce(
                 localData[threadIdx.x].x = 0;
                 localData[threadIdx.x].y = 0;
                 localData[threadIdx.x].z = 0;
+                localData[threadIdx.x].fx = 0.0f;
+                localData[threadIdx.x].fy = 0.0f;
+                localData[threadIdx.x].fz = 0.0f;
             }
             // We need to apply periodic boundary conditions separately for each interaction.
             unsigned int tj = tgx;
@@ -15296,10 +15300,9 @@ extern "C" __global__ void computeTwoBodyForce(
                 // then in this loop we filter out only the Oxygens.
                 // Better implementation would be to write our own implemenation of a O-only Neighbor
                 // list based either on NonBondedUtilities or on CustomManyParticleForce
-                if ((atom1 % 3 == 0) && (atom2 % 3 == 0) && (atom1 < atom2) && (atom2 < NUM_ATOMS)) {
-                    tempEnergy = 1.;
-                    // COMPUTE_INTERACTION
+                if ((atom1 % 3 == 0) && (atom2 % 3 == 0) && (atom1 > atom2) && (atom1 < NUM_ATOMS)) {
 
+                    debuginternal = true;
                     // 2 water molecules and extra positions
                     real3 positions[10];
                     // first water
@@ -15400,7 +15403,6 @@ extern "C" __global__ void computeTwoBodyForce(
                         computeGrads(g+29, gOO+29, forces + Xa2, forces + Xb1, sw);
                         computeGrads(g+30, gOO+30, forces + Xa2, forces + Xb2, sw);
 
-
                     distributeXpointGrad(positions + Oa, positions + Ha1, positions + Ha2,
                             forces + Xa1, forces + Xa2,
                             forces + Oa, forces + Ha1, forces + Ha2, sw);
@@ -15412,7 +15414,7 @@ extern "C" __global__ void computeTwoBodyForce(
                     }
 
 
-                    energy += sw * tempEnergy * CAL2JOULE;
+                    // energy += sw * tempEnergy * CAL2JOULE;
 
                     // gradient of the switch
                     gsw *= tempEnergy/rOO;
@@ -15423,31 +15425,37 @@ extern "C" __global__ void computeTwoBodyForce(
                     // write forces of second molecule to shared memory
 
                     for (int i=0; i<3; i++) {
-                        localData[tbx+tj+i].fx += forces[Ob + i].x;
-                        localData[tbx+tj+i].fy += forces[Ob + i].y;
-                        localData[tbx+tj+i].fz += forces[Ob + i].z;
+                        localData[tbx+tj+i].fx = forces[Ob + i].x;
+                        localData[tbx+tj+i].fy = forces[Ob + i].y;
+                        localData[tbx+tj+i].fz = forces[Ob + i].z;
                     }
+
 
                 }
                 tj = (tj + 1) & (TILE_SIZE - 1);
             }
 
-
-            for (int i=0; i<3; i++) {
-                forces[i] *= CAL2JOULE * -10;
-            }
-
             // Write results.
             for (int i=0; i<3; i++) {
-                atomicAdd(&forceBuffers[atom1 + i], static_cast<unsigned long long>((long long) (forces[i].x*0x100000000)));
-                atomicAdd(&forceBuffers[atom1 + i+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (forces[i].y*0x100000000)));
-                atomicAdd(&forceBuffers[atom1 + i+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) (forces[i].z*0x100000000)));
+                atomicAdd(&forceBuffers[atom1 + i], static_cast<unsigned long long>((long long) ((CAL2JOULE * -10 * forces[i].x)*0x100000000)));
+                atomicAdd(&forceBuffers[atom1 + i+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) ((CAL2JOULE * -10 * forces[i].y)*0x100000000)));
+                atomicAdd(&forceBuffers[atom1 + i+2*PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) ((CAL2JOULE * -10 * forces[i].z)*0x100000000)));
             }
 #ifdef USE_CUTOFF
             unsigned int atom2 = atomIndices[threadIdx.x];
+                if (debuginternal) {
+                    energy =  (static_cast<real> ( (real) forceBuffers[atom1]))/0x100000000/CAL2JOULE/10;
+                    energy =  forces[0].x/(CAL2JOULE*10);
+                    energy = forces[Ob].x;
+                    energy = forces[Ob + 1].x;
+                    energy = localData[tbx+tj+1].fx;
+                    energy = atomIndices[2];
+                    energy = 2;
+                }
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
+            __syncthreads();
             if (atom2 < PADDED_NUM_ATOMS) {
                 atomicAdd(&forceBuffers[atom2], static_cast<unsigned long long>((long long) ((CAL2JOULE * -10 * localData[threadIdx.x].fx)*0x100000000)));
                 atomicAdd(&forceBuffers[atom2+PADDED_NUM_ATOMS], static_cast<unsigned long long>((long long) ((CAL2JOULE * -10 * localData[threadIdx.x].fy)*0x100000000)));
