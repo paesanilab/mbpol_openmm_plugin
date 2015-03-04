@@ -76,7 +76,12 @@ void testForce() {
     mbpolOneBodyForce->addOneBody(particleIndices);
 
     system.addForce(mbpolOneBodyForce);
-    Context context(system, integrator, Platform::getPlatformByName( "CUDA"));
+    string platformName = "CUDA";
+    Platform & cudaPlatform = Platform::getPlatformByName( platformName );
+
+    std::cout << "Supports double precision: " << cudaPlatform.supportsDoublePrecision() << std::endl;
+    cudaPlatform.setPropertyDefaultValue("CudaPrecision", "double");
+    Context context(system, integrator, cudaPlatform);
 
     std::vector<Vec3> positions(numberOfParticles);
 

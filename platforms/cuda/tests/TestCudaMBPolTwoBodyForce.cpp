@@ -129,11 +129,16 @@ void testTwoBody( double boxDimension, bool addPositionOffset ) {
 
     system.addForce(mbpolTwoBodyForce);
     std::string platformName;
-    #define AngstromToNm 0.1    
+    #define AngstromToNm 0.1
     #define CalToJoule   4.184
 
     platformName = "CUDA";
-    Context context(system, integrator, Platform::getPlatformByName( platformName ) );
+    Platform & cudaPlatform = Platform::getPlatformByName( platformName );
+
+    std::cout << "Supports double precision: " << cudaPlatform.supportsDoublePrecision() << std::endl;
+    cudaPlatform.setPropertyDefaultValue("CudaPrecision", "single");
+
+    Context context(system, integrator, cudaPlatform );
 
     context.setPositions(positions);
     State state                      = context.getState(State::Forces | State::Energy);
