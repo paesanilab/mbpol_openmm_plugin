@@ -15196,7 +15196,6 @@ extern "C" __global__ void computeTwoBodyForce(
     __shared__ int atomIndices[THREAD_BLOCK_SIZE];
     __shared__ volatile int skipTiles[THREAD_BLOCK_SIZE];
     skipTiles[threadIdx.x] = -1;
-bool debuginternal = false;
 
     while (pos < end) {
         real3 forces[10];
@@ -15223,7 +15222,6 @@ bool debuginternal = false;
 #ifdef USE_CUTOFF
         if (numTiles <= maxTiles) {
             x = tiles[pos];
-            real4 blockSizeX = blockSize[x];
         }
         else
 #endif
@@ -15310,7 +15308,6 @@ bool debuginternal = false;
                 // list based either on NonBondedUtilities or on CustomManyParticleForce
                 if ((atom1 % 3 == 0) && (atom2 % 3 == 0) && (atom1 > atom2) && (atom1 < NUM_ATOMS)) {
 
-                    debuginternal = true;
                     // 2 water molecules and extra positions
                     real3 positions[10];
                     // first water
@@ -15451,15 +15448,6 @@ bool debuginternal = false;
             }
 #ifdef USE_CUTOFF
             unsigned int atom2 = atomIndices[threadIdx.x];
-                if (debuginternal) {
-                    energy =  (static_cast<real> ( (real) forceBuffers[atom1]))/0x100000000/CAL2JOULE/10;
-                    energy =  forces[0].x/(CAL2JOULE*10);
-                    energy = forces[Ob].x;
-                    energy = forces[Ob + 1].x;
-                    energy = localData[tbx+tj+1].fx;
-                    energy = atomIndices[2];
-                    energy = 2;
-                }
 #else
             unsigned int atom2 = y*TILE_SIZE + tgx;
 #endif
