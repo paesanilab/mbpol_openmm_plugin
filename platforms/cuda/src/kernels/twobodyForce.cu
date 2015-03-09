@@ -15154,11 +15154,19 @@ extern "C" __device__ void evaluateSwitchFunc(real r, real * sw, real * gsw) {
 extern "C" __global__ void computeTwoBodyForce(
 
         // const unsigned long long* __restrict__ forceBuffers, unsigned long long* __restrict__ tempForceBuffers) {
-        unsigned long long* __restrict__ forceBuffers, real* __restrict__ energyBuffer, const real4* __restrict__ posq,
-        unsigned int startTileIndex, unsigned int numTileIndices
+        unsigned long long* __restrict__ forceBuffers,
+        real* __restrict__ energyBuffer,
+        const real4* __restrict__ posq,
+        unsigned int startTileIndex,
+        unsigned int numTileIndices
 #ifdef USE_CUTOFF
-        , const int* __restrict__ tiles, const unsigned int* __restrict__ interactionCount, real4 periodicBoxSize, real4 invPeriodicBoxSize,
-        unsigned int maxTiles, const real4* __restrict__ blockCenter, const real4* __restrict__ blockSize, const unsigned int* __restrict__ interactingAtoms
+        , const int* __restrict__ tiles,
+        const unsigned int* __restrict__ interactionCount,
+        real4 periodicBoxSize,
+        real4 invPeriodicBoxSize,
+        unsigned int maxTiles,
+        // const real4* __restrict__ blockSize,
+        const unsigned int* __restrict__ interactingAtoms
 #endif
         ) {
     const unsigned int totalWarps = (blockDim.x*gridDim.x)/TILE_SIZE;

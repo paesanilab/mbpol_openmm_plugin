@@ -207,10 +207,21 @@ double CudaCalcMBPolTwoBodyForceKernel::execute(ContextImpl& context, bool inclu
     int numTileIndices = cu.getNonbondedUtilities().getNumTiles();
     unsigned int maxTiles = cu.getNonbondedUtilities().getInteractingTiles().getSize();
 
-    
-    void* args[] = {&cu.getForce().getDevicePointer(),&cu.getEnergyBuffer().getDevicePointer(), &cu.getPosq().getDevicePointer(), &startTileIndex, &numTileIndices,  &cu.getNonbondedUtilities().getInteractingTiles().getDevicePointer(), &cu.getNonbondedUtilities().getInteractionCount().getDevicePointer(),
-            cu.getPeriodicBoxSizePointer(), cu.getInvPeriodicBoxSizePointer(), &maxTiles, &cu.getNonbondedUtilities().getBlockCenters().getDevicePointer(), &cu.getNonbondedUtilities().getInteractingAtoms().getDevicePointer()};
-    cu.executeKernel(computeTwoBodyForceKernel, args, cu.getNumAtoms());
+    cu.getNonbondedUtilities().prepareInteractions();
+    void* args[] = {&cu.getForce().getDevicePointer(),
+        &cu.getEnergyBuffer().getDevicePointer(),
+        &cu.getPosq().getDevicePointer(),
+        &startTileIndex,
+        &numTileIndices,
+        &cu.getNonbondedUtilities().getInteractingTiles().getDevicePointer(),
+        &cu.getNonbondedUtilities().getInteractionCount().getDevicePointer(),
+        cu.getPeriodicBoxSizePointer(),
+        cu.getInvPeriodicBoxSizePointer(),
+        &maxTiles,
+       // &cu.getNonbondedUtilities().getBlock().getDevicePointer(),
+        &cu.getNonbondedUtilities().getInteractingAtoms().getDevicePointer()
+    };
+    cu.executeKernel(computeTwoBodyForceKernel, args, cu.getPaddedNumAtoms());
     return 0.0;
 }
 
