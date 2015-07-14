@@ -1,0 +1,77 @@
+<ForceField>
+    <AtomTypes>
+        <Type name="MBPol-O" class="O" element="O" mass="15.99943"/>
+        <Type name="MBPol-H" class="H" element="H" mass="1.007947"/>
+        <Type name="MBPol-M" class="M" mass="0"/>
+        <Type name="MBPol-Cl" class="CL" element="CL" mass="35.453200"/>
+    </AtomTypes>
+    <Residues>
+        <Residue name="HOH">
+            <Atom name="O" type="MBPol-O" />
+            <Atom name="H1" type="MBPol-H" />
+            <Atom name="H2" type="MBPol-H" />
+            <Atom name="M" type="MBPol-M" />
+            <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2" weight1="0.573293118" weight2="0.213353441" weight3="0.213353441" />
+            <Bond from="0" to="1" />
+            <Bond from="0" to="2" />
+        </Residue>
+    </Residues>
+ <Script>
+numAtomClasses = 4
+
+# Conversion from atom types to atom classes.
+
+typeToClass = {
+  'MBPol-O':0,
+  'MBPol-H':1,
+  'MBPol-M':2,
+  'MBPol-Cl':3
+}
+
+C6table = [
+        992951990399.5001, # J/(nm**6 mol) O-O
+        349345451067.4757, # J/(nm**6 mol) O-H
+        0, # O-M
+        4560788515802.851, # J/(nm**6 mol) O-CL
+        349345451067.4757, # J/(nm**6 mol) O-H
+        84071563831.72867, # J/(nm**6 mol) H-H
+        0, # H-M
+        859798320161.6786, # J/(nm**6 mol) H-CL
+        0, 0, 0, 0, # M
+        4560788515802.851, # J/(nm**6 mol) O-CL
+        859798320161.6786, # J/(nm**6 mol) H-CL
+        0, # CL-M
+        0, # CL-CL
+]
+
+
+d6table = [
+        92.95485815062264, # (nm**-1) O-O
+        97.75202425217957, # (nm**-1) O-H
+        0, # O-M
+        163.8868407461115, # (nm**-1) O-CL
+        97.75202425217957, # (nm**-1) O-H
+        94.06475169954112, # (nm**-1) H-H
+        0, # H-M
+        57.78854012725382, # (nm**-1) H-CL
+        0, 0, 0, 0, # M
+        163.8868407461115, # (nm**-1) O-CL
+        57.78854012725382, # (nm**-1) H-CL
+        0, # CL-M
+        0, # CL-CL
+]
+
+tt6sum = '1 + (1 + (1 + (1 + (1 + (1 + (1) * d6 * r / 6) * d6 * r / 5) * d6 * r / 4) * d6 * r / 3) * d6 * r / 2) * d6 * r / 1'
+
+customNonbondedForce = mm.CustomNonbondedForce('C6 * ( 6 * tt6 / r**7 - d6^7 / 720. * exp(-1*d6*r)); tt6=1.0 - tt6sum*exp(-d6*r);tt6sum={}; C6=C6table(type1, type2); d6=d6table(type1, type2)'.format(tt6sum))
+customNonbondedForce.setNonbondedMethod(0)
+customNonbondedForce.setCutoffDistance(nonbondedCutoff)
+customNonbondedForce.addTabulatedFunction('C6table', mm.Discrete2DFunction(numAtomClasses, numAtomClasses, C6table))
+customNonbondedForce.addTabulatedFunction('d6table', mm.Discrete2DFunction(numAtomClasses, numAtomClasses, d6table))
+customNonbondedForce.addPerParticleParameter('type')
+for atom in data.atoms:
+     customNonbondedForce.addParticle([typeToClass[data.atomType[atom]]])
+sys.addForce(customNonbondedForce)
+
+ </Script>
+</ForceField>
