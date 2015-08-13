@@ -4,7 +4,6 @@
 #include "openmm/reference/RealVec.h"
 
 using OpenMM::RealVec;
-
 //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - //
 
 double variable::v_exp(const double& r0, const double& k,
@@ -102,6 +101,21 @@ double f_switch(const double& r, double& g)
     } else if (r > r2i) {
         const double t1 = M_PI/(r2f - r2i);
         const double x = (r - r2i)*t1;
+        g = - std::sin(x)*t1/2.0;
+        return (1.0 + std::cos(x))/2.0;
+    } else {
+        g = 0.0;
+        return 1.0;
+    }
+}
+double f_switch_chloride(const double& r, double& g)
+{
+    if (r > r2f_chloride) {
+        g = 0.0;
+        return 0.0;
+    } else if (r > r2i_chloride) {
+        const double t1 = M_PI/(r2f_chloride - r2i_chloride);
+        const double x = (r - r2i_chloride)*t1;
         g = - std::sin(x)*t1/2.0;
         return (1.0 + std::cos(x))/2.0;
     } else {

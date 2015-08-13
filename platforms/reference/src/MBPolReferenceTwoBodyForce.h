@@ -33,6 +33,7 @@
 
 using namespace  OpenMM;
 enum TrimerAtomIndex { Oa, Ha1, Ha2, Ob, Hb1, Hb2, Oc, Hc1, Hc2 };
+enum ClIndex { Oa_dummy, Ha1_dummy, Ha2_dummy, Cl, dummy1, dummy2, Cl2, dummy3, dummy4, Cl3 };
 enum ExtraPointIndex { Xa1, Xa2, Xb1, Xb2, Xc1, Xc2 };
 
 class MBPolReferenceTwoBodyForce;
