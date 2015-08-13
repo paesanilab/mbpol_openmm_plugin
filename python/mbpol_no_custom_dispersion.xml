@@ -101,7 +101,7 @@ for atom1, atom2 in itertools.combinations(data.atoms, 2):
         customNonbondedForce.addExclusion(atom1.index, atom2.index)
         #print("excluding bond between atom {} and atom {}".format(atom1.index, atom2.index))
     
-sys.addForce(customNonbondedForce)
+#sys.addForce(customNonbondedForce)
 
  </Script>
 </ForceField>
