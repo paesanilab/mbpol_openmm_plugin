@@ -18,7 +18,7 @@ before_install:
   - conda create --yes -n py3 python=3 --file ci/requirements-conda.txt
   - source activate py3
   - $HOME/miniconda3/envs/py3/bin/pip install $PIP_ARGS nose-exclude
-  - conda install --yes openmm runipy
+  - conda install --yes openmm=6.2 runipy
 
 install:
   - mkdir build
