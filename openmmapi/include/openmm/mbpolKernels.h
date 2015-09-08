@@ -222,7 +222,6 @@ public:
      * @param system     the System this kernel will be applied to
      * @param force      the GBSAOBCForce this kernel will be used for
      */
-    virtual void initialize(const OpenMM::System& system, const MBPolDispersionForce& force) = 0;
 
     /**
      * Execute the kernel to calculate the forces and/or energy.
@@ -239,7 +238,6 @@ public:
      * @param context    the context to copy parameters to
      * @param force      the MBPolDispersionForce to copy the parameters from
      */
-    virtual void copyParametersToContext(ContextImpl& context, const MBPolDispersionForce& force) = 0;
 };
 
 } // namespace MBPolPlugin

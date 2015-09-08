@@ -28,14 +28,12 @@
 #include "MBPolReferenceOneBodyForce.h"
 #include "MBPolReferenceTwoBodyForce.h"
 #include "MBPolReferenceThreeBodyForce.h"
-#include "MBPolReferenceDispersionForce.h"
 #include "openmm/reference/ReferencePlatform.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/MBPolElectrostaticsForce.h"
 #include "openmm/internal/MBPolElectrostaticsForceImpl.h"
 #include "openmm/internal/MBPolTwoBodyForceImpl.h"
 #include "openmm/internal/MBPolThreeBodyForceImpl.h"
-#include "openmm/internal/MBPolDispersionForceImpl.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/internal/NonbondedForceImpl.h"
@@ -535,96 +533,6 @@ void ReferenceCalcMBPolThreeBodyForceKernel::copyParametersToContext(ContextImpl
         std::vector<int> particleIndices;
         force.getParticleParameters(i, particleIndices);
         allParticleIndices[i] = particleIndices;
-
-    }
-}
-
-ReferenceCalcMBPolDispersionForceKernel::ReferenceCalcMBPolDispersionForceKernel(std::string name, const Platform& platform, const OpenMM::System& system) :
-       CalcMBPolDispersionForceKernel(name, platform), system(system) {
-    useCutoff = 0;
-    usePBC = 0;
-    cutoff = 1.0e+10;
-    neighborList = NULL;
-}
-
-ReferenceCalcMBPolDispersionForceKernel::~ReferenceCalcMBPolDispersionForceKernel() {
-    if( neighborList ){
-        delete neighborList;
-    }
-}
-
-void ReferenceCalcMBPolDispersionForceKernel::initialize(const OpenMM::System& system, const MBPolDispersionForce& force) {
-
-    // per-particle parameters
-
-    numParticles = force.getNumMolecules();
-    allParticleElements.resize(numParticles);
-    for( int ii = 0; ii < numParticles; ii++ ){
-
-        string atomElement;
-        force.getParticleParameters(ii,  atomElement );
-        allParticleElements[ii] = atomElement;
-    }
-
-    c6d6Data = force.getDispersionParameters();
-
-    useCutoff              = (force.getNonbondedMethod() != MBPolDispersionForce::NoCutoff);
-    usePBC                 = (force.getNonbondedMethod() == MBPolDispersionForce::CutoffPeriodic);
-    cutoff                 = force.getCutoff();
-    neighborList           = useCutoff ? new NeighborList() : NULL;
-    dispersionCoefficient  = force.getUseDispersionCorrection() ?  MBPolDispersionForceImpl::calcDispersionCorrection(system, force) : 0.0;
-
-}
-
-double ReferenceCalcMBPolDispersionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-
-    vector<RealVec>& allPosData   = extractPositions(context);
-    vector<set<int> > allExclusions;
-    allExclusions.resize(numParticles);
-
-    vector<RealVec>& forceData = extractForces(context);
-    MBPolReferenceDispersionForce dispersionForce;
-    RealOpenMM energy;
-    dispersionForce.setCutoff( cutoff );
-    // neighborList created only with oxygens, then allParticleIndices is used to get reference to the hydrogens
-#if OPENMM_MAJOR_VERSION == 6 && OPENMM_MINOR_VERSION <= 2
-    computeNeighborListVoxelHash( *neighborList, numParticles, allPosData, allExclusions, extractBoxSize(context), usePBC, cutoff, 0.0, false);
-#else
-    computeNeighborListVoxelHash( *neighborList, numParticles, allPosData, allExclusions, extractBoxVectors(context), usePBC, cutoff, 0.0, false);
-#endif
-
-    dispersionForce.setDispersionParameters(c6d6Data);
-    RealOpenMM dispersionCorrection = 0;
-    if( usePBC ){
-        dispersionForce.setNonbondedMethod( MBPolReferenceDispersionForce::CutoffPeriodic);
-        RealVec& box = extractBoxSize(context);
-        double minAllowedSize = 1.999999*cutoff;
-        if (box[0] < minAllowedSize || box[1] < minAllowedSize || box[2] < minAllowedSize){
-            throw OpenMMException("The periodic box size has decreased to less than twice the cutoff.");
-        }
-        dispersionForce.setPeriodicBox(box);
-        dispersionCorrection = dispersionCoefficient/(box[0]*box[1]*box[2]);
-    } else {
-        dispersionForce.setNonbondedMethod( MBPolReferenceDispersionForce::CutoffNonPeriodic);
-    }
-    // here we need allPosData, every atom!
-    energy  = dispersionForce.calculateForceAndEnergy( numParticles, allPosData, allParticleElements, *neighborList, forceData);
-    energy += dispersionCorrection;
-
-    return static_cast<double>(energy);
-}
-
-void ReferenceCalcMBPolDispersionForceKernel::copyParametersToContext(ContextImpl& context, const MBPolDispersionForce& force) {
-    if (numParticles != force.getNumParticles())
-        throw OpenMMException("updateParametersInContext: The number of particles has changed");
-
-    // Record the values.
-
-    for (int i = 0; i < numParticles; ++i) {
-
-        string atomElement;
-        force.getParticleParameters(i, atomElement);
-        allParticleElements[i] = atomElement;
 
     }
 }

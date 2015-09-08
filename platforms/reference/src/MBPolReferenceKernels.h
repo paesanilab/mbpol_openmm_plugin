@@ -246,46 +246,6 @@ private:
     ThreeNeighborList* neighborList;
 };
 
-class ReferenceCalcMBPolDispersionForceKernel : public CalcMBPolDispersionForceKernel {
-public:
-    ReferenceCalcMBPolDispersionForceKernel(std::string name, const Platform& platform, const System& system);
-    ~ReferenceCalcMBPolDispersionForceKernel();
-    /**
-     * Initialize the kernel.
-     *
-     * @param system     the System this kernel will be applied to
-     * @param force      the MBPolDispersionForce this kernel will be used for
-     */
-    void initialize(const System& system, const MBPolDispersionForce& force);
-    /**
-     * Execute the kernel to calculate the forces and/or energy.
-     *
-     * @param context        the context in which to execute this kernel
-     * @param includeForces  true if forces should be calculated
-     * @param includeEnergy  true if the energy should be calculated
-     * @return the potential energy due to the force
-     */
-    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-    /**
-     * Copy changed parameters over to a context.
-     *
-     * @param context    the context to copy parameters to
-     * @param force      the MBPolDispersionForce to copy the parameters from
-     */
-    void copyParametersToContext(ContextImpl& context, const MBPolDispersionForce& force);
-private:
-    int numParticles;
-    int useCutoff;
-    int usePBC;
-    double cutoff;
-    double dispersionCoefficient;
-    std::vector< string > allParticleElements;
-    c6d6Datatype c6d6Data;
-    const System& system;
-    NeighborList* neighborList;
-};
-
-
 } // namespace MBPolPlugin
 
 #endif /*MBPOL_OPENMM_REFERENCE_KERNELS_H*/

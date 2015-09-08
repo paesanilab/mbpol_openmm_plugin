@@ -75,9 +75,6 @@ KernelImpl* MBPolReferenceKernelFactory::createKernelImpl(std::string name, cons
     if (name == CalcMBPolThreeBodyForceKernel::Name())
             return new ReferenceCalcMBPolThreeBodyForceKernel(name, platform, context.getSystem());
 
-    if (name == CalcMBPolDispersionForceKernel::Name())
-            return new ReferenceCalcMBPolDispersionForceKernel(name, platform, context.getSystem());
-
     if (name == CalcMBPolElectrostaticsForceKernel::Name())
         return new ReferenceCalcMBPolElectrostaticsForceKernel(name, platform, context.getSystem());
 

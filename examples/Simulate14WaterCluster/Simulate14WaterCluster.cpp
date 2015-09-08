@@ -105,11 +105,6 @@ void simulate14WaterCluster() {
     mbpolThreeBodyForce->setCutoff( cutoff );
     mbpolThreeBodyForce->setNonbondedMethod(MBPolThreeBodyForce::CutoffNonPeriodic);
 
-    // Dispersion Force
-    MBPolDispersionForce* dispersionForce = new MBPolDispersionForce();
-    dispersionForce->setCutoff( cutoff );
-    dispersionForce->setNonbondedMethod(MBPolDispersionForce::CutoffNonPeriodic);
-    
     // Atom positions O H H, [A], no virtual sites
 
     std::vector<Vec3> positions;

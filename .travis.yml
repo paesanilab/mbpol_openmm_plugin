@@ -34,3 +34,5 @@ script:
   - runipy water14.ipynb
   - mbpol_builder mbpol_config.ini example_run.py
   - python example_run.py && python -c "import os.path; import sys; sys.exit(not os.path.isfile('water14_cluster_trajectory.pdb'))"
+  - cd ./tests
+  - python TestCustomDispersion.py  

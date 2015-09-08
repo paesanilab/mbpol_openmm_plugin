@@ -42,7 +42,6 @@
 #include "openmm/VirtualSite.h"
 
 #include "openmm/MBPolThreeBodyForce.h"
-#include "openmm/MBPolDispersionForce.h"
 
 #include "openmm/LangevinIntegrator.h"
 #include <iostream>
@@ -98,11 +97,6 @@ void runTest( double boxDimension ) {
     mbpolThreeBodyForce->setCutoff( cutoff );
     mbpolThreeBodyForce->setForceGroup(3);
 
-    // Dispersion Force
-    MBPolDispersionForce* dispersionForce = new MBPolDispersionForce();
-    dispersionForce->setCutoff( cutoff );
-    dispersionForce->setForceGroup(4);
-
     if( boxDimension > 0.0 ){
         Vec3 a( boxDimension, 0.0, 0.0 );
         Vec3 b( 0.0, boxDimension, 0.0 );
@@ -117,18 +111,12 @@ void runTest( double boxDimension ) {
 
         mbpolThreeBodyForce->setNonbondedMethod(MBPolThreeBodyForce::CutoffPeriodic);
 
-        dispersionForce->setNonbondedMethod(MBPolDispersionForce::CutoffPeriodic);
-        dispersionForce->setUseDispersionCorrection(true);
-
-
     } else {
         mbpolElectrostaticsForce->setNonbondedMethod( MBPolElectrostaticsForce::NoCutoff );
 
         mbpolTwoBodyForce->setNonbondedMethod(MBPolTwoBodyForce::CutoffNonPeriodic);
 
         mbpolThreeBodyForce->setNonbondedMethod(MBPolThreeBodyForce::CutoffNonPeriodic);
-
-        dispersionForce->setNonbondedMethod(MBPolDispersionForce::CutoffNonPeriodic);
 
     }
 
@@ -162,23 +150,13 @@ void runTest( double boxDimension ) {
         mbpolOneBodyForce->addOneBody(particleIndices);
         mbpolTwoBodyForce->addParticle( particleIndices);
         mbpolThreeBodyForce->addParticle( particleIndices);
-        dispersionForce->addParticle( "O");
-        dispersionForce->addParticle( "H");
-        dispersionForce->addParticle( "H");
-        dispersionForce->addParticle( "M");
 
     }
-
-    // <!-- Units: c6 [kJ mol^{-1} nm^{-6}], d6 [nm^{-1}] -->
-    dispersionForce->addDispersionParameters("O", "O", 9.92951990e+08, 9.29548582e+01);
-    dispersionForce->addDispersionParameters("O", "H", 3.49345451e+08, 9.77520243e+01);
-    dispersionForce->addDispersionParameters("H", "H", 8.40715638e+07, 9.40647517e+01);
 
     system.addForce(mbpolElectrostaticsForce);
     system.addForce(mbpolOneBodyForce);
     system.addForce(mbpolTwoBodyForce);
     system.addForce(mbpolThreeBodyForce);
-    system.addForce(dispersionForce);
 
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
 
@@ -251,12 +229,11 @@ void runTest( double boxDimension ) {
 
     double tolerance = 1.0e-02;
 
-    vector<string> forceLabels;
+    vector<std::string> forceLabels;
     forceLabels.push_back("Electrostatics");
     forceLabels.push_back("OneBody");
     forceLabels.push_back("TwoBody");
     forceLabels.push_back("ThreeBody");
-    forceLabels.push_back("Dispersion");
     double energy = state.getPotentialEnergy() / CalToJoule;
 
     std::cout << "Total Energy: " << energy << " Kcal/mol "<< std::endl;

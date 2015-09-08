@@ -36,6 +36,5 @@
 #include "openmm/MBPolOneBodyForce.h"
 #include "openmm/MBPolTwoBodyForce.h"
 #include "openmm/MBPolThreeBodyForce.h"
-#include "openmm/MBPolDispersionForce.h"
 
 #endif /*MBPOL_OPENMM_H_*/

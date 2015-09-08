@@ -18,7 +18,6 @@ namespace std {
 #include "openmm/MBPolOneBodyForce.h"
 #include "openmm/MBPolTwoBodyForce.h"
 #include "openmm/MBPolThreeBodyForce.h"
-#include "openmm/MBPolDispersionForce.h"
 #include "OpenMM.h"
 #include "OpenMMAmoeba.h"
 #include "OpenMMDrude.h"

@@ -19,22 +19,7 @@
             <Atom name="Cl" type="MBPol-Cl" />
         </Residue>
     </Residues>
-    <MBPolElectrostaticsForce>
-        <Residue name="HOH" class1="O" class2="H" class3="H" thole-charge-charge="0.4" thole-charge-dipole="0.4" thole-dipole-dipole-intermolecules="0.055" thole-dipole-dipole-OH="0.626" thole-dipole-dipole-HH="0.055"/>
-        <Atom type="MBPol-O" charge="-5.1966000e-01" damping-factor="0.00131" polarizability="0.00131" />
-        <Atom type="MBPol-H" charge="2.5983000e-01" damping-factor="0.000294" polarizability="0.000294" />
-        <Atom type="MBPol-M" charge="0" damping-factor="0.00131" polarizability="0" />
-    </MBPolElectrostaticsForce>
-    <MBPolOneBodyForce>
-        <Residue name="HOH" class1="O" class2="H" class3="H" />
-    </MBPolOneBodyForce>
-    <MBPolTwoBodyForce>
-        <Residue name="HOH" class1="O" class2="H" class3="H" />
-    </MBPolTwoBodyForce>
-    <MBPolThreeBodyForce>
-        <Residue name="HOH" class1="O" class2="H" class3="H" />
-    </MBPolThreeBodyForce>
-    <Script>
+ <Script>
 numAtomClasses = 4
 
 # Conversion from atom types to atom classes.
@@ -62,19 +47,19 @@ C6table = [
         0, # CL-CL
 ]
 
-
+# vqz-f12-CP-fit-3.5-5.5-new-polar-5th-iteration+scans
 d6table = [
         9.29548582e+01, # (nm**-1) O-O
         9.77520243e+01, # (nm**-1) O-H
         0, # O-M
-        1.638868407461115e+02, # (nm**-1) O-CL
+        2.606978398421525e+02, # (nm**-1) O-CL
         9.77520243e+01, # (nm**-1) O-H
         9.40647517e+01, # (nm**-1) H-H
         0, # H-M
-        5.778854012725382e+01, # (nm**-1) H-CL
+        1.631899730583967e+02, # (nm**-1) H-CL
         0, 0, 0, 0, # M
-        1.638868407461115e+02, # (nm**-1) O-CL
-        5.778854012725382e+01, # (nm**-1) H-CL
+        2.606978398421525e+02, # (nm**-1) O-CL
+        1.631899730583967e+02, # (nm**-1) H-CL
         0, # CL-M
         0, # CL-CL
 ]
@@ -83,10 +68,7 @@ tt6sum = '1 + (1 + (1 + (1 + (1 + (1 + (1) * d6 * r / 6) * d6 * r / 5) * d6 * r 
 
 customNonbondedForce = mm.CustomNonbondedForce('-C6*tt6/r^6; tt6=1.0 - tt6sum*exp(-d6*r);tt6sum={}; C6=C6table(type1, type2); d6=d6table(type1, type2)'.format(tt6sum))
 
-methodMap = {mm.app.NoCutoff:mm.CustomNonbondedForce.NoCutoff,
-mm.app.PME:mm.CustomNonbondedForce.CutoffPeriodic, mm.app.CutoffPeriodic:mm.CustomNonbondedForce.CutoffPeriodic, mm.app.CutoffNonPeriodic:mm.CustomNonbondedForce.CutoffNonPeriodic}
-customNonbondedForce.setNonbondedMethod(methodMap[nonbondedMethod])
-
+customNonbondedForce.setNonbondedMethod(0)
 customNonbondedForce.setCutoffDistance(nonbondedCutoff)
 customNonbondedForce.addTabulatedFunction('C6table', mm.Discrete2DFunction(numAtomClasses, numAtomClasses, C6table))
 customNonbondedForce.addTabulatedFunction('d6table', mm.Discrete2DFunction(numAtomClasses, numAtomClasses, d6table))
