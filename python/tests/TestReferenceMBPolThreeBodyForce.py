@@ -11,12 +11,12 @@ class TestCustomForce(unittest.TestCase):
     """This tests the Reference implementation of ReferenceMBPolOneBodyForce."""
 
     def testTwoBody(self, nonbondedMethod=app.CutoffNonPeriodic):
-        expected_energy = 6.14207815
-        pdb = app.PDBFile("pdb_files/water2.pdb")
+        expected_energy = 0.15586446
+        pdb = app.PDBFile("../water3.pdb")
         forcefield = app.ForceField("../mbpol_no_custom_dispersion.xml") 
         # this xml file is the same as mbpol.xml but the Custom dispersion force is never added to the system.  This is needed because it cannot be removed from the system once it is added and thereroe prevents the testing of individual forces within mbpol.xml
         
-        forcefield._forces = forcefield._forces[2:3]
+        forcefield._forces = forcefield._forces[3:4]
         nonbondedCutoff = 10*unit.nanometer
         
         if (nonbondedMethod == app.PME):

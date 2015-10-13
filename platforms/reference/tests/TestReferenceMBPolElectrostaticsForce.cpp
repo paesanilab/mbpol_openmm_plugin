@@ -743,14 +743,19 @@ static void testWater3() {
     std::vector<double> thole(5);
     std::fill(zeroDipole.begin(), zeroDipole.end(), 0.);
     std::fill(zeroQuadrupole.begin(), zeroQuadrupole.end(), 0.);
-    std::fill(thole.begin(), thole.end(), 0.4);
+
+    thole[TCC] = 0.4;
+    thole[TCD] = 0.4;
+    thole[TDD] = 0.055;
+    thole[TDDOH]  = 0.626;
+    thole[TDDHH] = 0.055;
 
     for( unsigned int jj = 0; jj < numberOfParticles; jj += particlesPerMolecule ){
-        mbpolElectrostaticsForce->addElectrostatics( -5.1966000e-01, jj+1, jj+2, jj+3,
+        mbpolElectrostaticsForce->addElectrostatics( -5.1966000e-01, jj+1, jj+2, -1,
                                             thole, 0.001310, 0.001310 );
-        mbpolElectrostaticsForce->addElectrostatics(  2.5983000e-01, jj, jj+2, jj+3,
+        mbpolElectrostaticsForce->addElectrostatics(  2.5983000e-01, jj, jj+2, -1,
                                             thole, 0.000294, 0.000294 );
-        mbpolElectrostaticsForce->addElectrostatics(  2.5983000e-01, jj, jj+1, jj+3,
+        mbpolElectrostaticsForce->addElectrostatics(  2.5983000e-01, jj, jj+1, -1,
                                             thole, 0.000294, 0.000294 );
     }
 
@@ -954,6 +959,8 @@ static void testWater3VirtualSitePMEHugeBox() {
     thole[TDD] = 0.055;
     thole[TDDOH]  = 0.626;
     thole[TDDHH] = 0.055;
+
+    // testing with no polarizability
 
     for( unsigned int jj = 0; jj < numberOfParticles; jj += 4 ){
         mbpolElectrostaticsForce->addElectrostatics( -5.1966000e-01, jj+1, jj+2, jj+3,

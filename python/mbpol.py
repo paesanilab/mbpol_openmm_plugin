@@ -2,6 +2,11 @@ import mbpolplugin
 from simtk.openmm import app
 from simtk import unit
 
+try:
+    from exceptions import ValueError, NotImplementedError
+except:
+    pass
+
 ## @private
 class MBPolOneBodyForceGenerator:
 
@@ -56,18 +61,16 @@ class MBPolOneBodyForceGenerator:
 
         force.setNonbondedMethod(methodMap[nonbondedMethod])
 
-        for i in range(len(data.angles)):
-            angle = data.angles[i]
-            atom1 = data.atoms[angle[0]]
-            atom2 = data.atoms[angle[1]]
-            atom3 = data.atoms[angle[2]]
-            if atom1.residue.name == 'HOH' and atom2.residue.name == 'HOH' and atom3.residue.name == 'HOH':
-                # FIXME loop through all residues of MBPolOneBodyForce and match their name
+        for residue in data.atoms[0].residue.chain.residues():
+            global_atoms_indices = [a.index for a in residue.atoms()]
+
+            if len(global_atoms_indices) > 1:
+                global_atoms_indices += [-1] * (3 - len(global_atoms_indices))
                 v = mbpolplugin.vectori()
-                v.push_back(atom2.index)
-                v.push_back(atom1.index)
-                v.push_back(atom3.index)
-                force.addOneBody(v);
+                for i in range(3):
+                    v.push_back(global_atoms_indices[i])
+
+                force.addOneBody(v)
 
 app.forcefield.parsers["MBPolOneBodyForce"] = MBPolOneBodyForceGenerator.parseElement
 
@@ -126,19 +129,15 @@ class MBPolTwoBodyForceGenerator:
 
         force.setNonbondedMethod(methodMap[nonbondedMethod])
 
-        for i in range(len(data.angles)):
-            angle = data.angles[i]
-            atom1 = data.atoms[angle[0]]
-            atom2 = data.atoms[angle[1]]
-            atom3 = data.atoms[angle[2]]
-            if atom1.residue.name == 'HOH' and atom2.residue.name == 'HOH' and atom3.residue.name == 'HOH':
-                # FIXME loop through all residues of MBPolTwoBodyForce and match their name
-                v = mbpolplugin.vectori()
-                v.push_back(atom2.index)
-                v.push_back(atom1.index)
-                v.push_back(atom3.index)
+        for residue in data.atoms[0].residue.chain.residues():
+            global_atoms_indices = [a.index for a in residue.atoms()]
 
-                force.addParticle(v)
+            global_atoms_indices += [-1] * (3 - len(global_atoms_indices))
+            v = mbpolplugin.vectori()
+            for i in range(3):
+                v.push_back(global_atoms_indices[i])
+
+            force.addParticle(v)
 
 app.forcefield.parsers["MBPolTwoBodyForce"] = MBPolTwoBodyForceGenerator.parseElement
 
@@ -197,19 +196,16 @@ class MBPolThreeBodyForceGenerator:
 
         force.setNonbondedMethod(methodMap[nonbondedMethod])
 
-        for i in range(len(data.angles)):
-            angle = data.angles[i]
-            atom1 = data.atoms[angle[0]]
-            atom2 = data.atoms[angle[1]]
-            atom3 = data.atoms[angle[2]]
-            if atom1.residue.name == 'HOH' and atom2.residue.name == 'HOH' and atom3.residue.name == 'HOH':
-                # FIXME loop through all residues of MBPolThreeBodyForce and match their name
-                v = mbpolplugin.vectori()
-                v.push_back(atom2.index)
-                v.push_back(atom1.index)
-                v.push_back(atom3.index)
+        for residue in data.atoms[0].residue.chain.residues():
+            global_atoms_indices = [a.index for a in residue.atoms()]
 
-                force.addParticle(v)
+            global_atoms_indices += [-1] * (3 - len(global_atoms_indices))
+            v = mbpolplugin.vectori()
+            for i in range(3):
+                v.push_back(global_atoms_indices[i])
+
+            force.addParticle(v)
+
 
 app.forcefield.parsers["MBPolThreeBodyForce"] = MBPolThreeBodyForceGenerator.parseElement
 
@@ -294,6 +290,7 @@ class MBPolElectrostaticsForceGenerator:
         self.types2 = []
         self.types3 = []
         self.typeMap = {}
+        self.setIncludeChargeRedistribution = True;
 
     @staticmethod
     def parseElement(element, forceField):
@@ -303,11 +300,11 @@ class MBPolElectrostaticsForceGenerator:
         #     <Atom type="MBPol-O" charge="-5.1966000e-01" damping-factor="0.00131" polarizability="0.00131" />
         #     <Atom type="MBPol-H" charge="2.5983000e-01" damping-factor="0.000294" polarizability="0.000294" />
         #     <Atom type="MBPol-M" charge="0" damping-factor="0.00131" polarizability="0" />
+        # <ChargeRedistribution set="False"/>
         # </MBPolElectrostaticsForce>
-
         generator = MBPolElectrostaticsForceGenerator()
         forceField.registerGenerator(generator)
-
+        # mbpolElectrostaticsForce->setIncludeChargeRedistribution(false);
         for MBPolElectrostaticsForce_template in element.findall('MBPolElectrostaticsForce'):
             types = forceField._findAtomTypes(MBPolElectrostaticsForce_template.attrib, 3)
             if None not in types:
@@ -324,7 +321,7 @@ class MBPolElectrostaticsForceGenerator:
                 raise ValueError(outputString)
 
         for residue in element.findall('Residue'):
-
+            
         #     <Residue name="HOH" class1="OW" class2="HW" class3="HW" thole-charge-charge="0.4" thole-charge-dipole="0.4" thole-dipole-dipole-intermolecules="0.055" thole-dipole-dipole-1-2="0.055" thole-dipole-dipole-1-3="0.626" thole-dipole-dipole-2-3="0.626" /> 
 
             name = residue.attrib["name"]
@@ -340,7 +337,7 @@ class MBPolElectrostaticsForceGenerator:
         #     <Atom type="MBPol-H" charge="2.5983000e-01" damping-factor="0.000294" polarizability="0.000294" />
             types = forceField._findAtomTypes(atom.attrib, 1)
             if None not in types:
-
+    
                 for t in types[0]:
                     generator.typeMap[t] = dict(  polarizability = float(atom.attrib['polarizability']),
                                              charge         = float(atom.attrib['charge']),
@@ -349,9 +346,14 @@ class MBPolElectrostaticsForceGenerator:
             else:
                 outputString = "MBPolElectrostaticsForceGenerator: error getting type for atom: %s" % (atom.attrib['type'])
                 raise ValueError(outputString)
-
+                
+        for value in element.findall('setIncludeChargeRedistribution'):
+            if value.attrib['chargeRedistribution'] == 'True':
+                generator.setIncludeChargeRedistribution = True
+            elif value.attrib['chargeRedistribution'] == 'False':
+                generator.setIncludeChargeRedistribution = False
+         
     def createForce(self, sys, data, nonbondedMethod, nonbondedCutoff, args):
-
         # CutoffNonPeriodic defaults to NoCutoff
         methodMap = {app.NoCutoff:mbpolplugin.MBPolElectrostaticsForce.NoCutoff,
                      app.CutoffNonPeriodic:mbpolplugin.MBPolElectrostaticsForce.NoCutoff,
@@ -365,30 +367,20 @@ class MBPolElectrostaticsForceGenerator:
         if len(existing) == 0:
             force = mbpolplugin.MBPolElectrostaticsForce()
             force.setCutoffDistance(float(nonbondedCutoff.value_in_unit(unit.nanometer)))
+            #force.setIncludeChargeRedistribution(False)
             sys.addForce(force)
         else:
             force = existing[0]
-        print("HERE")
-        print(float(nonbondedCutoff.value_in_unit(unit.nanometer)))
+        
+        force.setIncludeChargeRedistribution(self.setIncludeChargeRedistribution)
         force.setNonbondedMethod(methodMap[nonbondedMethod])
 
-        for i in range(len(data.angles)):
-            angle = data.angles[i]
-            # FIXME loop through all residues of MBPolElectrostaticsForce and match their name
+        for atom in data.atoms:
+            t = data.atomType[atom]
+            global_atoms_indices = [a.index for a in atom.residue.atoms() if a.index != atom.index]
 
-            # FIXME cheating! get virtual site index by max(otheratom indices)  + 1
-            global_atoms_indices = set([angle[local_atom_index] for local_atom_index in [0,1,2]])
-            virtual_site_index = max(global_atoms_indices) + 1
-            global_atoms_indices.add(virtual_site_index)
+            global_atoms_indices += [-1] * (3 - len(global_atoms_indices))
 
-            for atomIndex in global_atoms_indices:
-                atom = data.atoms[atomIndex]
-                t = data.atomType[atom]
-                if t in self.typeMap:
-                    other_atoms = global_atoms_indices - set([atomIndex])
-                    force.addElectrostatics(self.typeMap[t]['charge'], data.atoms[other_atoms.pop()].index, data.atoms[other_atoms.pop()].index, data.atoms[other_atoms.pop()].index, self.typeMap[atom.residue.name]['thole'], self.typeMap[t]['damping_factor'], self.typeMap[t]['polarizability'])
-
-                else:
-                    raise ValueError('No type for atom %s %s %d' % (atom.name, atom.residue.name, atom.residue.index))
+            force.addElectrostatics(self.typeMap[t]['charge'], global_atoms_indices[0], global_atoms_indices[1], global_atoms_indices[2], self.typeMap[atom.residue.name]['thole'], self.typeMap[t]['damping_factor'], self.typeMap[t]['polarizability'])
 
 app.forcefield.parsers["MBPolElectrostaticsForce"] = MBPolElectrostaticsForceGenerator.parseElement
