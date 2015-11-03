@@ -119,7 +119,7 @@ void testTwoWaterOneChloride(double boxDimension, bool addPositionOffset) {
 		}
 	}
 
-	expectedEnergy = 19.6295;
+	expectedEnergy = 16.920747+2.684862;
 
 	system.addForce(mbpolTwoBodyForce);
 
@@ -224,15 +224,12 @@ void testTwoBodyChloride(double boxDimension, bool addPositionOffset) {
 //        positions[5][1] += boxDimension;
 //    }
 
-	expectedForces[0] = Vec3(-3.278090251e+00, 4.781931804e+00,
-			2.443283214e+00);
-	expectedForces[1] = Vec3(5.700852530e-01, -1.298619977e+00,
-			1.232417788e+00);
-	expectedForces[2] = Vec3(2.181168186e-01, 1.161499952e+00, 5.698707152e-01);
-	expectedForces[3] = Vec3(2.489888179e+00, -4.644811779e+00,
-			-4.245571717e+00);
+	expectedForces[0] = Vec3(-3.403956,    5.086403,    2.284652);
+	expectedForces[1] = Vec3(0.695899,    -1.636129,    1.496679);
+	expectedForces[2] = Vec3(0.237500,    1.177815,    0.466670);
+	expectedForces[3] = Vec3(2.470557,    -4.628089,    -4.248001);
 
-	expectedEnergy = 2.027705104;
+	expectedEnergy = 1.890811;
 
 	system.addForce(mbpolTwoBodyForce);
 

@@ -21,6 +21,7 @@ namespace std {
 #include "OpenMM.h"
 #include "OpenMMAmoeba.h"
 #include "OpenMMDrude.h"
+#include "openmm/RPMDMonteCarloBarostat.h"
 %}
 
 %feature("autodoc", "1");
