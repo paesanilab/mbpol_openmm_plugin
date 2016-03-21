@@ -41,9 +41,6 @@ using namespace MBPolPlugin;
 
 using std::vector;
 
-bool MBPolElectrostaticsForceImpl::initializedCovalentDegrees = false;
-int MBPolElectrostaticsForceImpl::CovalentDegrees[]           = { 1,2,3,4,0,1,2,3};
-
 MBPolElectrostaticsForceImpl::MBPolElectrostaticsForceImpl(const MBPolElectrostaticsForce& owner) : owner(owner) {
 }
 
@@ -82,58 +79,9 @@ std::vector<std::string> MBPolElectrostaticsForceImpl::getKernelNames() {
     return names;
 }
 
-const int* MBPolElectrostaticsForceImpl::getCovalentDegrees( void ) {
-    if( !initializedCovalentDegrees ){
-        initializedCovalentDegrees                                      = true;
-        CovalentDegrees[MBPolElectrostaticsForce::Covalent12]               = 1;
-        CovalentDegrees[MBPolElectrostaticsForce::Covalent13]               = 2;
-        CovalentDegrees[MBPolElectrostaticsForce::Covalent14]               = 3;
-        CovalentDegrees[MBPolElectrostaticsForce::Covalent15]               = 4;
-        CovalentDegrees[MBPolElectrostaticsForce::PolarizationCovalent11]   = 0;
-        CovalentDegrees[MBPolElectrostaticsForce::PolarizationCovalent12]   = 1;
-        CovalentDegrees[MBPolElectrostaticsForce::PolarizationCovalent13]   = 2;
-        CovalentDegrees[MBPolElectrostaticsForce::PolarizationCovalent14]   = 3;
-    }
-    return CovalentDegrees;
-}
-
-void MBPolElectrostaticsForceImpl::getCovalentRange( const MBPolElectrostaticsForce& force, int atomIndex, const std::vector<MBPolElectrostaticsForce::CovalentType>& lists,
-                                                 int* minCovalentIndex, int* maxCovalentIndex ){
-
-    *minCovalentIndex =  999999999;
-    *maxCovalentIndex = -999999999;
-    for( unsigned int kk = 0; kk < lists.size(); kk++ ){
-        MBPolElectrostaticsForce::CovalentType jj = lists[kk];
-        std::vector<int> covalentList;
-        force.getCovalentMap( atomIndex, jj, covalentList );
-        for( unsigned int ii = 0; ii < covalentList.size(); ii++ ){
-            if( *minCovalentIndex > covalentList[ii] ){
-               *minCovalentIndex = covalentList[ii];
-            }
-            if( *maxCovalentIndex < covalentList[ii] ){
-               *maxCovalentIndex = covalentList[ii];
-            }
-        }
-    }   
-    return;
-}
-
-void MBPolElectrostaticsForceImpl::getCovalentDegree( const MBPolElectrostaticsForce& force, std::vector<int>& covalentDegree ){
-    covalentDegree.resize( MBPolElectrostaticsForce::CovalentEnd );
-    const int* CovalentDegrees = MBPolElectrostaticsForceImpl::getCovalentDegrees();
-    for( unsigned int kk = 0; kk < MBPolElectrostaticsForce::CovalentEnd; kk++ ){
-        covalentDegree[kk] = CovalentDegrees[kk];
-    }   
-    return;
-}
-
 void MBPolElectrostaticsForceImpl::getElectrostaticPotential( ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                                           std::vector< double >& outputElectrostaticPotential ){
     kernel.getAs<CalcMBPolElectrostaticsForceKernel>().getElectrostaticPotential(context, inputGrid, outputElectrostaticPotential);
-}
-
-void MBPolElectrostaticsForceImpl::getSystemElectrostaticsMoments( ContextImpl& context, std::vector< double >& outputElectrostaticsMonents ){
-    kernel.getAs<CalcMBPolElectrostaticsForceKernel>().getSystemElectrostaticsMoments(context, outputElectrostaticsMonents);
 }
 
 void MBPolElectrostaticsForceImpl::updateParametersInContext(ContextImpl& context) {

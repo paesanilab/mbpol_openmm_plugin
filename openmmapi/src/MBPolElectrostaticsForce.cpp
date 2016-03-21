@@ -40,10 +40,12 @@ using namespace MBPolPlugin;
 using std::string;
 using std::vector;
 
-MBPolElectrostaticsForce::MBPolElectrostaticsForce() : nonbondedMethod(NoCutoff), polarizationType(Mutual), pmeBSplineOrder(5), cutoffDistance(0.9), ewaldErrorTol(1e-4), mutualInducedMaxIterations(200),
+MBPolElectrostaticsForce::MBPolElectrostaticsForce() : nonbondedMethod(NoCutoff), pmeBSplineOrder(5), cutoffDistance(0.9), ewaldErrorTol(1e-4), mutualInducedMaxIterations(200),
                                                mutualInducedTargetEpsilon(1.0e-07), scalingDistanceCutoff(100.0), electricConstant(138.9354558456), aewald(0.0), includeChargeRedistribution(true) {
     pmeGridDimension.resize(3);
     pmeGridDimension[0] = pmeGridDimension[1] = pmeGridDimension[2];
+    const double defaultTholeParameters[5] = { 0.4, 0.4, 0.055, 0.626, 0.055 };
+    tholeParameters.assign(&defaultTholeParameters[0], &defaultTholeParameters[0]+5);
 }
 
 MBPolElectrostaticsForce::NonbondedMethod MBPolElectrostaticsForce::getNonbondedMethod( void ) const {
@@ -52,14 +54,6 @@ MBPolElectrostaticsForce::NonbondedMethod MBPolElectrostaticsForce::getNonbonded
 
 void MBPolElectrostaticsForce::setNonbondedMethod( MBPolElectrostaticsForce::NonbondedMethod method) {
     nonbondedMethod = method;
-}
-
-MBPolElectrostaticsForce::PolarizationType MBPolElectrostaticsForce::getPolarizationType( void ) const {
-    return polarizationType;
-}
-
-void MBPolElectrostaticsForce::setPolarizationType( MBPolElectrostaticsForce::PolarizationType type ) {
-    polarizationType = type;
 }
 
 double MBPolElectrostaticsForce::getCutoffDistance( void ) const {
@@ -81,7 +75,6 @@ void MBPolElectrostaticsForce::setIncludeChargeRedistribution( bool chargeRedist
 bool MBPolElectrostaticsForce::getIncludeChargeRedistribution( void ) const {
     return includeChargeRedistribution;
 }
-
 void MBPolElectrostaticsForce::setAEwald(double inputAewald ) { 
     aewald = inputAewald; 
 } 
@@ -136,84 +129,36 @@ void MBPolElectrostaticsForce::setEwaldErrorTolerance(double tol) {
     ewaldErrorTol = tol;
 }
 
-int MBPolElectrostaticsForce::addElectrostatics( double charge, 
-                                       int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, const std::vector<double>& thole, double dampingFactor, double polarity) {
-    multipoles.push_back(ElectrostaticsInfo( charge, 0, multipoleAtomZ,  multipoleAtomX, multipoleAtomY, thole, dampingFactor, polarity));
+int MBPolElectrostaticsForce::addElectrostatics( double charge,
+                                       int moleculeIndex, int atomType, double dampingFactor, double polarity) {
+    multipoles.push_back(ElectrostaticsInfo( charge, moleculeIndex, atomType, dampingFactor, polarity));
     return multipoles.size()-1;
 }
 
 void MBPolElectrostaticsForce::getElectrostaticsParameters(int index, double& charge,
-                                                  int& axisType, int& multipoleAtomZ, int& multipoleAtomX, int& multipoleAtomY, std::vector<double>& thole, double& dampingFactor, double& polarity ) const {
+                                                  int& moleculeIndex, int& atomType, double& dampingFactor, double& polarity ) const {
     charge                      = multipoles[index].charge;
 
-    axisType                    = multipoles[index].axisType;
-    multipoleAtomZ              = multipoles[index].multipoleAtomZ;
-    multipoleAtomX              = multipoles[index].multipoleAtomX;
-    multipoleAtomY              = multipoles[index].multipoleAtomY;
-
-    thole.resize( 5 );
-    for (int i=0; i<5;i++)
-    thole[i] = multipoles[index].thole[i];
+    moleculeIndex               = multipoles[index].moleculeIndex;
+    atomType                    = multipoles[index].atomType;
     dampingFactor               = multipoles[index].dampingFactor;
     polarity                    = multipoles[index].polarity;
 }
 
 void MBPolElectrostaticsForce::setElectrostaticsParameters(int index, double charge,
-                                                  int axisType, int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, const std::vector<double>&  thole, double dampingFactor, double polarity ) {
+                                                  int moleculeIndex, int atomType, double dampingFactor, double polarity ) {
 
     multipoles[index].charge                      = charge;
 
-    multipoles[index].axisType                    = axisType;
-    multipoles[index].multipoleAtomZ              = multipoleAtomZ;
-    multipoles[index].multipoleAtomX              = multipoleAtomX;
-    multipoles[index].multipoleAtomY              = multipoleAtomY;
-    for (int i; i<5;i++)
-        multipoles[index].thole [i]                      = thole[i];
     multipoles[index].dampingFactor               = dampingFactor;
     multipoles[index].polarity                    = polarity;
+    multipoles[index].moleculeIndex = moleculeIndex;
+    multipoles[index].atomType = atomType;
 
-}
-
-void MBPolElectrostaticsForce::setCovalentMap(int index, CovalentType typeId, const std::vector<int>& covalentAtoms ) {
-
-    std::vector<int>& covalentList = multipoles[index].covalentInfo[typeId];
-    covalentList.resize( covalentAtoms.size() );
-    for( unsigned int ii = 0; ii < covalentAtoms.size(); ii++ ){
-       covalentList[ii] = covalentAtoms[ii];
-    }
-}
-
-void MBPolElectrostaticsForce::getCovalentMap(int index, CovalentType typeId, std::vector<int>& covalentAtoms ) const {
-
-    // load covalent atom index entries for atomId==index and covalentId==typeId into covalentAtoms
-
-    std::vector<int> covalentList = multipoles[index].covalentInfo[typeId];
-    covalentAtoms.resize( covalentList.size() );
-    for( unsigned int ii = 0; ii < covalentList.size(); ii++ ){
-       covalentAtoms[ii] = covalentList[ii];
-    }
-}
-
-void MBPolElectrostaticsForce::getCovalentMaps(int index, std::vector< std::vector<int> >& covalentLists ) const {
-
-    covalentLists.resize( CovalentEnd );
-    for( unsigned int jj = 0; jj < CovalentEnd; jj++ ){
-        std::vector<int> covalentList = multipoles[index].covalentInfo[jj];
-        std::vector<int> covalentAtoms;
-        covalentAtoms.resize( covalentList.size() );
-        for( unsigned int ii = 0; ii < covalentList.size(); ii++ ){
-           covalentAtoms[ii] = covalentList[ii];
-        }
-        covalentLists[jj] = covalentAtoms;
-    }
 }
 
 void MBPolElectrostaticsForce::getElectrostaticPotential( const std::vector< Vec3 >& inputGrid, Context& context, std::vector< double >& outputElectrostaticPotential ){
     dynamic_cast<MBPolElectrostaticsForceImpl&>(getImplInContext(context)).getElectrostaticPotential(getContextImpl(context), inputGrid, outputElectrostaticPotential);
-}
-
-void MBPolElectrostaticsForce::getSystemElectrostaticsMoments(Context& context, std::vector< double >& outputElectrostaticsMonents ){
-    dynamic_cast<MBPolElectrostaticsForceImpl&>(getImplInContext(context)).getSystemElectrostaticsMoments(getContextImpl(context), outputElectrostaticsMonents);
 }
 
 ForceImpl* MBPolElectrostaticsForce::createImpl()  const {

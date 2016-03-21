@@ -134,6 +134,7 @@ void runTest( double boxDimension ) {
     int numberOfParticles          = numberOfWaterMolecules * particlesPerMolecule;
 
     std::vector<int> particleIndices(particlesPerMolecule);
+	int waterMoleculeIndex=0;
     for( unsigned int jj = 0; jj < numberOfParticles; jj += particlesPerMolecule ){
         system.addParticle( 1.5999000e+01 );
         system.addParticle( 1.0080000e+00 );
@@ -147,14 +148,15 @@ void runTest( double boxDimension ) {
         particleIndices[1] = jj+1;
         particleIndices[2] = jj+2;
 
-        mbpolElectrostaticsForce->addElectrostatics( -5.1966000e-01, jj+1, jj+2, jj+3,
-                                            thole, 0.001310, 0.001310 );
-        mbpolElectrostaticsForce->addElectrostatics(  2.5983000e-01, jj, jj+2, jj+3,
-                                            thole, 0.000294, 0.000294 );
-        mbpolElectrostaticsForce->addElectrostatics(  2.5983000e-01, jj, jj+1, jj+3,
-                                            thole, 0.000294, 0.000294 );
-        mbpolElectrostaticsForce->addElectrostatics(  0., jj, jj+1, jj+2,
-                                                    thole,  0.001310,  0.);
+        mbpolElectrostaticsForce->addElectrostatics( -5.1966000e-01,
+                                            waterMoleculeIndex, 0, 0.001310, 0.001310 );
+        mbpolElectrostaticsForce->addElectrostatics(  2.5983000e-01,
+                                            waterMoleculeIndex, 1, 0.000294, 0.000294 );
+        mbpolElectrostaticsForce->addElectrostatics(  2.5983000e-01,
+                                            waterMoleculeIndex, 1, 0.000294, 0.000294 );
+        mbpolElectrostaticsForce->addElectrostatics(  0.,
+                                            waterMoleculeIndex, 2, 0.001310,  0.);
+		waterMoleculeIndex++;
 
         mbpolOneBodyForce->addOneBody(particleIndices);
         mbpolTwoBodyForce->addParticle( particleIndices);

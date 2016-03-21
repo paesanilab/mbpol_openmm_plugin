@@ -13,3 +13,8 @@ python/*qtip4*
 python/*qmc*
 *.pyc
 *.log
+*.vim
+*.nc
+obsolete
+.vagrant
+removed_integration_tests

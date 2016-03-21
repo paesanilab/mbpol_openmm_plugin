@@ -87,16 +87,6 @@ void MBPolReferenceElectrostaticsForce::setNonbondedMethod( MBPolReferenceElectr
     _nonbondedMethod = nonbondedMethod;
 }
 
-MBPolReferenceElectrostaticsForce::PolarizationType MBPolReferenceElectrostaticsForce::getPolarizationType( void ) const
-{
-    return _polarizationType;
-}
-
-void MBPolReferenceElectrostaticsForce::setPolarizationType( MBPolReferenceElectrostaticsForce::PolarizationType polarizationType )
-{
-    _polarizationType = polarizationType;
-}
-
 void MBPolReferenceElectrostaticsForce::setIncludeChargeRedistribution( bool includeChargeRedistribution ) {
     _includeChargeRedistribution = includeChargeRedistribution;
 }
@@ -190,12 +180,11 @@ void MBPolReferenceElectrostaticsForce::copyRealVecVector( const std::vector<Ope
 
 void MBPolReferenceElectrostaticsForce::loadParticleData( const std::vector<RealVec>& particlePositions,
                                                       const std::vector<RealOpenMM>& charges,
+													  const std::vector<int>& moleculeIndices,
+													  const std::vector<int>& atomTypes,
                                                       const std::vector<RealOpenMM>& tholes,
                                                       const std::vector<RealOpenMM>& dampingFactors,
                                                       const std::vector<RealOpenMM>& polarity,
-                                                      const std::vector<int>& multipoleAtomZs,
-                                                      const std::vector<int>& multipoleAtomXs,
-                                                      const std::vector<int>& multipoleAtomYs,
                                                       std::vector<ElectrostaticsParticleData>& particleData ) const
 {
 
@@ -206,18 +195,11 @@ void MBPolReferenceElectrostaticsForce::loadParticleData( const std::vector<Real
 
         particleData[ii].position             = particlePositions[ii];
         particleData[ii].charge               = charges[ii];
+        particleData[ii].moleculeIndex        = moleculeIndices[ii];
+        particleData[ii].atomType             = atomTypes[ii];
 
-        particleData[ii].thole[TCC]           = tholes[5*ii+0];
-        particleData[ii].thole[TCD]           = tholes[5*ii+1];
-        particleData[ii].thole[TDD]          = tholes[5*ii+2];
-        particleData[ii].thole[TDDOH]         = tholes[5*ii+3];
-        particleData[ii].thole[TDDHH]         = tholes[5*ii+4];
         particleData[ii].dampingFactor        = dampingFactors[ii];
         particleData[ii].polarity             = polarity[ii];
-
-        particleData[ii].multipoleAtomZs = multipoleAtomZs[ii];
-        particleData[ii].multipoleAtomXs = multipoleAtomXs[ii];
-        particleData[ii].multipoleAtomYs = multipoleAtomYs[ii];
 
     }
 }
@@ -275,9 +257,7 @@ RealOpenMM MBPolReferenceElectrostaticsForce::getAndScaleInverseRs(  const Elect
                                                           RealOpenMM r, bool justScale, int interactionOrder, int interactionType) const
 {
 
-    bool isSameWater = (particleI.multipoleAtomZs == particleK.particleIndex) or
-                (particleI.multipoleAtomYs == particleK.particleIndex) or
-                (particleI.multipoleAtomXs == particleK.particleIndex);
+    bool isSameWater = (particleI.moleculeIndex == particleK.moleculeIndex);
 
     // MB-Pol has additional charge-charge term:
     // rrI[1] = charge-charge (ts0 in mbpol)
@@ -297,7 +277,9 @@ RealOpenMM MBPolReferenceElectrostaticsForce::getAndScaleInverseRs(  const Elect
         }
     }
 
-    RealOpenMM pgamma = std::min(particleI.thole[interactionType], particleK.thole[interactionType]);
+    std::vector<RealOpenMM> thole = getTholeParameters();
+
+    RealOpenMM pgamma = thole[interactionType];
 
     if (interactionType == TDD) {
         // dipole - dipole thole parameters is different for 3 cases:
@@ -307,19 +289,14 @@ RealOpenMM MBPolReferenceElectrostaticsForce::getAndScaleInverseRs(  const Elect
 
         if (isSameWater) {
             // FIXME improve identification of oxygen, now relies only on particles order
-            bool oneIsOxygen = ((particleI.multipoleAtomZs >= particleI.particleIndex) and
-                                (particleI.multipoleAtomYs >= particleI.particleIndex) and
-                                (particleI.multipoleAtomXs >= particleI.particleIndex)) or
-                                ((particleK.multipoleAtomZs >= particleK.particleIndex) and
-                                 (particleK.multipoleAtomYs >= particleK.particleIndex) and
-                                 (particleK.multipoleAtomXs >= particleK.particleIndex));
+            bool oneIsOxygen = (particleI.atomType == 0) or (particleK.atomType == 0);
             if (oneIsOxygen) {
-                pgamma = std::min(particleI.thole[TDDOH],particleK.thole[TDDOH]);
+                pgamma = thole[TDDOH];
             } else {
-                pgamma = std::min(particleI.thole[TDDHH],particleK.thole[TDDHH]);
+                pgamma = thole[TDDHH];
             }
         } else {
-            pgamma = std::min(particleI.thole[TDD],particleK.thole[TDD]);
+            pgamma = thole[TDD];
         }
     }
 
@@ -351,20 +328,14 @@ RealOpenMM MBPolReferenceElectrostaticsForce::getAndScaleInverseRs(  const Elect
 }
 
 void MBPolReferenceElectrostaticsForce::calculateFixedElectrostaticsFieldPairIxn( const ElectrostaticsParticleData& particleI,
-                                                                         const ElectrostaticsParticleData& particleJ,
-                                                                         RealOpenMM dScale, RealOpenMM pScale )
+                                                                         const ElectrostaticsParticleData& particleJ)
 {
 
     if( particleI.particleIndex == particleJ.particleIndex )return;
 
     // in MBPol there is no contribution to the Fixed Electrostatics Field
-    // from atoms of the same water molecule. multipoleAtomZs is used for
-    // defining a reference frame for the water molecules and
-    // contains the indices to the other 2 atoms in the same water molecule.
-
-    bool isSameWater = (particleI.multipoleAtomZs == particleJ.particleIndex) or
-            (particleI.multipoleAtomYs == particleJ.particleIndex) or
-            (particleI.multipoleAtomXs == particleJ.particleIndex);
+    // from atoms of the same water molecule.
+    bool isSameWater = (particleI.moleculeIndex == particleJ.moleculeIndex);
     if( isSameWater )return;
 
     RealVec deltaR    = particleJ.position - particleI.position;
@@ -382,8 +353,8 @@ void MBPolReferenceElectrostaticsForce::calculateFixedElectrostaticsFieldPairIxn
     RealVec field                               = deltaR*factor;
 
     unsigned int particleIndex                  = particleI.particleIndex;
-    _fixedElectrostaticsField[particleIndex]        -= field*dScale;
-    _fixedElectrostaticsFieldPolar[particleIndex]   -= field*pScale;
+    _fixedElectrostaticsField[particleIndex]        -= field;
+    _fixedElectrostaticsFieldPolar[particleIndex]   -= field;
 
     // field at particle J due multipoles at particle I
 
@@ -391,8 +362,8 @@ void MBPolReferenceElectrostaticsForce::calculateFixedElectrostaticsFieldPairIxn
 
     field                                       = deltaR*factor;
     particleIndex                               = particleJ.particleIndex;
-    _fixedElectrostaticsField[particleIndex]        += field*dScale;
-    _fixedElectrostaticsFieldPolar[particleIndex]   += field*pScale;
+    _fixedElectrostaticsField[particleIndex]        += field;
+    _fixedElectrostaticsFieldPolar[particleIndex]   += field;
 
     return;
 }
@@ -411,13 +382,7 @@ void MBPolReferenceElectrostaticsForce::calculateFixedElectrostaticsField( const
             // if site jj is less than max covalent scaling index then get/apply scaling constants
             // otherwise add unmodified field and fieldPolar to particle fields
 
-            RealOpenMM dScale, pScale;
-//            if( jj <= _maxScaleIndex[ii] ){
-//                getDScaleAndPScale( ii, jj, dScale, pScale );
-//            } else {
-                dScale = pScale = 1.0;
-            //}
-            calculateFixedElectrostaticsFieldPairIxn( particleData[ii], particleData[jj], dScale, pScale );
+            calculateFixedElectrostaticsFieldPairIxn( particleData[ii], particleData[jj]);
         }
     }
     return;
@@ -577,8 +542,6 @@ void MBPolReferenceElectrostaticsForce::calculateInducedDipoles( const std::vect
     calculateFixedElectrostaticsField( particleData );
 
     // initialize inducedDipoles
-    // if polarization type is 'Direct', then return after initializing; otherwise
-    // converge induced dipoles.
 
     for( unsigned int ii = 0; ii < _numParticles; ii++ ){
         _fixedElectrostaticsField[ii]      *= particleData[ii].polarity;
@@ -592,11 +555,6 @@ void MBPolReferenceElectrostaticsForce::calculateInducedDipoles( const std::vect
     updateInducedDipoleField.push_back( UpdateInducedDipoleFieldStruct( &_fixedElectrostaticsFieldPolar,  &_inducedDipolePolar ) );
 
     initializeInducedDipoles( updateInducedDipoleField );
-
-    if( getPolarizationType() == MBPolReferenceElectrostaticsForce::Direct ){
-        setMutualInducedDipoleConverged( true );
-        return;
-    }
 
     // UpdateInducedDipoleFieldStruct contains induced dipole, fixed multipole fields and fields
     // due to other induced dipoles at each site
@@ -673,9 +631,7 @@ RealOpenMM MBPolReferenceElectrostaticsForce::calculateElectrostaticPairIxn( con
 
     glip[0] = particleK.charge*scip[2] - particleI.charge*scip[3];
 
-    bool isSameWater = (particleI.multipoleAtomZs == particleK.particleIndex) or
-                       (particleI.multipoleAtomYs == particleK.particleIndex) or
-                  (particleI.multipoleAtomXs == particleK.particleIndex);
+    bool isSameWater = (particleI.moleculeIndex == particleK.moleculeIndex);
     // Same water atoms have no charge/charge interaction and
     // no induced-dipole/charge interaction
     if( isSameWater ) {
@@ -820,14 +776,11 @@ RealOpenMM MBPolReferenceElectrostaticsForce::calculateElectrostatic( const std:
 
 void MBPolReferenceElectrostaticsForce::setup( const std::vector<RealVec>& particlePositions,
                                            const std::vector<RealOpenMM>& charges,
+                                           const std::vector<int>& moleculeIndices,
+                                           const std::vector<int>& atomTypes,
                                            const std::vector<RealOpenMM>& tholes,
                                            const std::vector<RealOpenMM>& dampingFactors,
                                            const std::vector<RealOpenMM>& polarity,
-                                           const std::vector<int>& axisTypes,
-                                           const std::vector<int>& multipoleAtomZs,
-                                           const std::vector<int>& multipoleAtomXs,
-                                           const std::vector<int>& multipoleAtomYs,
-                                           const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
                                            std::vector<ElectrostaticsParticleData>& particleData )
 {
 
@@ -840,8 +793,8 @@ void MBPolReferenceElectrostaticsForce::setup( const std::vector<RealVec>& parti
     // check if induced dipoles converged
 
     _numParticles = particlePositions.size();
-    loadParticleData( particlePositions, charges,
-                      tholes, dampingFactors, polarity, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs, particleData );
+    loadParticleData( particlePositions, charges, moleculeIndices, atomTypes,
+                      tholes, dampingFactors, polarity, particleData );
 
     if (getIncludeChargeRedistribution())
     {
@@ -865,14 +818,11 @@ void MBPolReferenceElectrostaticsForce::setup( const std::vector<RealVec>& parti
 
 RealOpenMM MBPolReferenceElectrostaticsForce::calculateForceAndEnergy( const std::vector<RealVec>& particlePositions,
                                                                    const std::vector<RealOpenMM>& charges,
+																   const std::vector<int>& moleculeIndices,
+																   const std::vector<int>& atomTypes,
                                                                    const std::vector<RealOpenMM>& tholes,
                                                                    const std::vector<RealOpenMM>& dampingFactors,
                                                                    const std::vector<RealOpenMM>& polarity,
-                                                                   const std::vector<int>& axisTypes,
-                                                                   const std::vector<int>& multipoleAtomZs,
-                                                                   const std::vector<int>& multipoleAtomXs,
-                                                                   const std::vector<int>& multipoleAtomYs,
-                                                                   const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
                                                                    std::vector<RealVec>& forces )
 {
 
@@ -881,9 +831,9 @@ RealOpenMM MBPolReferenceElectrostaticsForce::calculateForceAndEnergy( const std
     // map torques to forces
 
     std::vector<ElectrostaticsParticleData> particleData;
-    setup( particlePositions, charges, tholes,
-            dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
-            multipoleAtomCovalentInfo, particleData );
+    setup( particlePositions, charges, moleculeIndices, atomTypes, tholes,
+            dampingFactors, polarity,
+            particleData );
 
     RealOpenMM energy = calculateElectrostatic( particleData, forces );
 
@@ -893,14 +843,11 @@ RealOpenMM MBPolReferenceElectrostaticsForce::calculateForceAndEnergy( const std
 void MBPolReferenceElectrostaticsForce::calculateMBPolSystemElectrostaticsMoments( const std::vector<RealOpenMM>& masses,
                                                                            const std::vector<RealVec>& particlePositions,
                                                                            const std::vector<RealOpenMM>& charges,
+																		   const std::vector<int>& moleculeIndices,
+																		   const std::vector<int>& atomTypes,
                                                                            const std::vector<RealOpenMM>& tholes,
                                                                            const std::vector<RealOpenMM>& dampingFactors,
                                                                            const std::vector<RealOpenMM>& polarity,
-                                                                           const std::vector<int>& axisTypes,
-                                                                           const std::vector<int>& multipoleAtomZs,
-                                                                           const std::vector<int>& multipoleAtomXs,
-                                                                           const std::vector<int>& multipoleAtomYs,
-                                                                           const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
                                                                            std::vector<RealOpenMM>& outputElectrostaticsMoments )
 {
 
@@ -909,9 +856,9 @@ void MBPolReferenceElectrostaticsForce::calculateMBPolSystemElectrostaticsMoment
     // calculate system moments
 
     std::vector<ElectrostaticsParticleData> particleData;
-    setup( particlePositions, charges, tholes,
-           dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
-           multipoleAtomCovalentInfo, particleData );
+    setup( particlePositions, charges,moleculeIndices, atomTypes, tholes,
+           dampingFactors, polarity,
+           particleData );
 
     RealOpenMM totalMass  = 0.0;
     RealVec centerOfMass  = RealVec( 0.0, 0.0, 0.0 );
@@ -1020,14 +967,11 @@ RealOpenMM MBPolReferenceElectrostaticsForce::calculateElectrostaticPotentialFor
 
 void MBPolReferenceElectrostaticsForce::calculateElectrostaticPotential( const std::vector<RealVec>& particlePositions,
                                                                      const std::vector<RealOpenMM>& charges,
+																	 const std::vector<int>& moleculeIndices,
+																	 const std::vector<int>& atomTypes,
                                                                      const std::vector<RealOpenMM>& tholes,
                                                                      const std::vector<RealOpenMM>& dampingFactors,
                                                                      const std::vector<RealOpenMM>& polarity,
-                                                                     const std::vector<int>& axisTypes,
-                                                                     const std::vector<int>& multipoleAtomZs,
-                                                                     const std::vector<int>& multipoleAtomXs,
-                                                                     const std::vector<int>& multipoleAtomYs,
-                                                                     const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
                                                                      const std::vector<RealVec>& grid,
                                                                      std::vector<RealOpenMM>& potential )
 {
@@ -1038,9 +982,9 @@ void MBPolReferenceElectrostaticsForce::calculateElectrostaticPotential( const s
     // apply prefactor
 
     std::vector<ElectrostaticsParticleData> particleData;
-    setup( particlePositions, charges, tholes,
-           dampingFactors, polarity, axisTypes, multipoleAtomZs, multipoleAtomXs, multipoleAtomYs,
-           multipoleAtomCovalentInfo, particleData );
+    setup( particlePositions, charges, moleculeIndices, atomTypes,tholes,
+           dampingFactors, polarity,
+           particleData );
 
     potential.resize( grid.size() );
     for( unsigned int ii = 0; ii < grid.size(); ii++ ){
@@ -1316,8 +1260,7 @@ void MBPolReferencePmeElectrostaticsForce::initializeBSplineModuli( void )
 }
 
 void MBPolReferencePmeElectrostaticsForce::calculateFixedElectrostaticsFieldPairIxn( const ElectrostaticsParticleData& particleI,
-                                                                            const ElectrostaticsParticleData& particleJ,
-                                                                            RealOpenMM dscale, RealOpenMM pscale )
+                                                                            const ElectrostaticsParticleData& particleJ)
 {
 
     // compute the real space portion of the Ewald summation
@@ -1325,13 +1268,9 @@ void MBPolReferencePmeElectrostaticsForce::calculateFixedElectrostaticsFieldPair
     if( particleI.particleIndex == particleJ.particleIndex )return;
 
     // in MBPol there is no contribution to the Fixed Multipole Field
-    // from atoms of the same water molecule. multipoleAtomZs is used for
-    // defining a reference frame for the water molecules and
-    // contains the indices to the other 2 atoms in the same water molecule.
+    // from atoms of the same water molecule.
 
-    bool isSameWater = (particleI.multipoleAtomZs == particleJ.particleIndex) or
-                       (particleI.multipoleAtomYs == particleJ.particleIndex) or
-                       (particleI.multipoleAtomXs == particleJ.particleIndex);
+    bool isSameWater = (particleI.moleculeIndex == particleJ.moleculeIndex);
 
     RealVec deltaR    = particleJ.position - particleI.position;
     getPeriodicDelta( deltaR );
@@ -1378,6 +1317,8 @@ void MBPolReferencePmeElectrostaticsForce::calculateFixedElectrostaticsFieldPair
 
     _fixedElectrostaticsField[iIndex]      += fim - fid;
     _fixedElectrostaticsField[jIndex]      += fjm - fjd;
+	//if ((particleI.particleIndex==0) & ((particleJ.particleIndex==7) | (particleJ.particleIndex==8)))
+	//	printf("Field: %.8g\n", (fim-fid)[0]);
 
     _fixedElectrostaticsFieldPolar[iIndex] += fim - fip;
     _fixedElectrostaticsFieldPolar[jIndex] += fjm - fjp;
@@ -2162,8 +2103,7 @@ RealOpenMM MBPolReferencePmeElectrostaticsForce::computeReciprocalSpaceFixedElec
 /**
  * Compute the forces due to the reciprocal space PME calculation for induced dipoles.
  */
-RealOpenMM MBPolReferencePmeElectrostaticsForce::computeReciprocalSpaceInducedDipoleForceAndEnergy( MBPolReferenceElectrostaticsForce::PolarizationType polarizationType,
-                                                                                                const std::vector<ElectrostaticsParticleData>& particleData,
+RealOpenMM MBPolReferencePmeElectrostaticsForce::computeReciprocalSpaceInducedDipoleForceAndEnergy( const std::vector<ElectrostaticsParticleData>& particleData,
                                                                                                 std::vector<RealVec>& forces, std::vector<RealOpenMM>& electrostaticPotential) const
 {
 
@@ -2211,12 +2151,9 @@ RealOpenMM MBPolReferencePmeElectrostaticsForce::computeReciprocalSpaceInducedDi
             f[1] += (inducedDipole[k]+inducedDipolePolar[k])*_phi[20*i+j2]*(scale[k]/scale[1]);
             f[2] += (inducedDipole[k]+inducedDipolePolar[k])*_phi[20*i+j3]*(scale[k]/scale[2]);
 
-            if( polarizationType == MBPolReferenceElectrostaticsForce::Mutual )
-            {
-                f[0] += (inducedDipole[k]*_phip[10*i+j1] + inducedDipolePolar[k]*_phid[10*i+j1])*(scale[k]/scale[0]);
-                f[1] += (inducedDipole[k]*_phip[10*i+j2] + inducedDipolePolar[k]*_phid[10*i+j2])*(scale[k]/scale[1]);
-                f[2] += (inducedDipole[k]*_phip[10*i+j3] + inducedDipolePolar[k]*_phid[10*i+j3])*(scale[k]/scale[2]);
-            }
+            f[0] += (inducedDipole[k]*_phip[10*i+j1] + inducedDipolePolar[k]*_phid[10*i+j1])*(scale[k]/scale[0]);
+            f[1] += (inducedDipole[k]*_phip[10*i+j2] + inducedDipolePolar[k]*_phid[10*i+j2])*(scale[k]/scale[1]);
+            f[2] += (inducedDipole[k]*_phip[10*i+j3] + inducedDipolePolar[k]*_phid[10*i+j3])*(scale[k]/scale[2]);
 
         }
 
@@ -2417,6 +2354,14 @@ void MBPolReferencePmeElectrostaticsForce::calculateDirectInducedDipolePairIxns(
     RealOpenMM preFactor1  = rr3 - bn1;
     RealOpenMM preFactor2  = bn2 - rr5;
 
+
+	//if ((particleI.particleIndex==0) & ((particleJ.particleIndex==7) | (particleJ.particleIndex==8)))
+	//{
+    //    printf("preFactor1 %.8g\n", preFactor1);
+    //    printf("preFactor2 %.8g\n", preFactor2);
+    //    printf("r %.8g\n", r);
+	//}
+
     for( unsigned int ii = 0; ii < updateInducedDipoleFields.size(); ii++ ){
         calculateDirectInducedDipolePairIxn( particleI.particleIndex, particleJ.particleIndex, preFactor1, preFactor2, deltaR,
                                             *(updateInducedDipoleFields[ii].inducedDipoles),
@@ -2540,9 +2485,7 @@ RealOpenMM MBPolReferencePmeElectrostaticsForce::calculatePmeDirectElectrostatic
 
     RealOpenMM glip1         = ck*scip3 - ci*scip4;
 
-    bool isSameWater = (particleI.multipoleAtomZs == particleJ.particleIndex) or
-                       (particleI.multipoleAtomYs == particleJ.particleIndex) or
-                       (particleI.multipoleAtomXs == particleJ.particleIndex);
+    bool isSameWater = (particleI.moleculeIndex == particleJ.moleculeIndex);
 
     // in PME same water interactions are not excluded,
     // but the scale factors are set to 0.
@@ -2572,6 +2515,11 @@ RealOpenMM MBPolReferencePmeElectrostaticsForce::calculatePmeDirectElectrostatic
     ei                  = ei - erli;
 
     energy              = (e + ei);
+
+    RealOpenMM conversionFactor  = (_electric/_dielectric);
+	//if ((particleI.particleIndex == 0) & (particleJ.particleIndex == 3))
+	//printf("Energy [%d, %d] %g Kcal\n", particleI.particleIndex, particleJ.particleIndex, (energy/2 ) / 4.184 * conversionFactor);
+	//printf("Energy [%d, %d] %.3f Kcal\n", particleI.particleIndex, particleJ.particleIndex, ralpha);
 
     electrostaticPotential[iIndex] += ck * (bn0 - rr1 * (1 - scale1CC)); // /2.;
     electrostaticPotential[jIndex] += ci * (bn0 - rr1 * (1 - scale1CC));//  /2.;
@@ -2656,7 +2604,7 @@ RealOpenMM MBPolReferencePmeElectrostaticsForce::calculatePmeDirectElectrostatic
     ftm2i -= ftm2ri;
 
     // increment gradient due to force and torque on first site;
-    RealOpenMM conversionFactor  = (_electric/_dielectric);
+    conversionFactor  = (_electric/_dielectric);
 
     energy                 *= conversionFactor;
 
@@ -2697,7 +2645,7 @@ RealOpenMM MBPolReferencePmeElectrostaticsForce::calculateElectrostatic( const s
 
     double previousEnergy = energy;
 
-    energy += computeReciprocalSpaceInducedDipoleForceAndEnergy( getPolarizationType(), particleData, forces, electrostaticPotentialInduced );
+    energy += computeReciprocalSpaceInducedDipoleForceAndEnergy( particleData, forces, electrostaticPotentialInduced );
     printPotential (electrostaticPotentialInduced, energy - previousEnergy , "Reciprocal Induced", particleData);
 
     previousEnergy = energy;
@@ -2717,11 +2665,6 @@ RealOpenMM MBPolReferencePmeElectrostaticsForce::calculateElectrostatic( const s
 
     printPotential (electrostaticPotentialDirect, energy, "Total", particleData);
 
-//    std::cout << std::endl << "Charges" << std::endl;
-//    for (int i=0; i<particleData.size(); i++) {
-//        std::cout << "Charge atom " << i << ": " << particleData[i].charge << " C" << std::endl;
-//    }
-
     for( unsigned int ii = 0; ii < particleData.size(); ii++ ){
         for( unsigned int s = 0; s < 3; s++ ){
             for( unsigned int xyz = 0; xyz < 3; xyz++ ){
@@ -2738,7 +2681,6 @@ RealOpenMM MBPolReferencePmeElectrostaticsForce::calculateElectrostatic( const s
 void MBPolReferenceElectrostaticsForce::printPotential (std::vector<RealOpenMM> electrostaticPotential, RealOpenMM energy, std::string name, const std::vector<ElectrostaticsParticleData>& particleData ) {
 #ifdef DEBUG_MBPOL
     RealOpenMM energyFromPotential = 0;
-    std::cout << std::endl << name << std::endl;
     for (int i=0; i<particleData.size(); i++) {
         // std::cout << "Potential atom " << i << ": " << electrostaticPotential[i] / (4.184) << " Kcal/mol/C <openmm-mbpol>" << std::endl;
         energyFromPotential += electrostaticPotential[i] * particleData[i].charge;

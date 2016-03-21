@@ -62,20 +62,14 @@ public:
 
     // void setPmeGridDimensions(const std::vector<int>& gridDimension);
 
-    int addElectrostatics(double charge, 
-                      int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, const std::vector<double>& thole, double dampingFactor, double polarity);
+    int addElectrostatics(double charge,
+                     int moleculeIndex, int atomType, double dampingFactor, double polarity);
 
     void getElectrostaticsParameters(int index, double& charge,
-                                 int& axisType, int& multipoleAtomZ, int& multipoleAtomX, int& multipoleAtomY, std::vector<double>& thole, double& dampingFactor, double& polarity) const;
+                     int& moleculeIndex, int& atomType, double& dampingFactor, double& polarity ) const;
 
     void setElectrostaticsParameters(int index, double charge,
-                                 int axisType, int multipoleAtomZ, int multipoleAtomX, int multipoleAtomY, const std::vector<double>& thole, double dampingFactor, double polarity);
-
-    // void setCovalentMap(int index, CovalentType typeId, const std::vector<int>& covalentAtoms);
-
-    // void getCovalentMap(int index, CovalentType typeId, std::vector<int>& covalentAtoms) const;
-
-    // void getCovalentMaps(int index, std::vector < std::vector<int> >& covalentLists) const;
+                     int moleculeIndex, int atomType, double dampingFactor, double polarity );
 
     int getMutualInducedMaxIterations(void) const;
 

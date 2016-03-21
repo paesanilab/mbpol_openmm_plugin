@@ -2,6 +2,12 @@ import mbpolplugin
 from simtk.openmm import app
 from simtk import unit
 
+ATOM_TYPES = {
+    "MBPol-O" : 0,
+    "MBPol-H" : 1,
+    "MBPol-M" : 2,
+}
+
 ## @private
 class MBPolOneBodyForceGenerator:
 
@@ -384,8 +390,7 @@ class MBPolElectrostaticsForceGenerator:
                 atom = data.atoms[atomIndex]
                 t = data.atomType[atom]
                 if t in self.typeMap:
-                    other_atoms = global_atoms_indices - set([atomIndex])
-                    force.addElectrostatics(self.typeMap[t]['charge'], data.atoms[other_atoms.pop()].index, data.atoms[other_atoms.pop()].index, data.atoms[other_atoms.pop()].index, self.typeMap[atom.residue.name]['thole'], self.typeMap[t]['damping_factor'], self.typeMap[t]['polarizability'])
+                    force.addElectrostatics(self.typeMap[t]['charge'], i, ATOM_TYPES[t], self.typeMap[t]['damping_factor'], self.typeMap[t]['polarizability'])
 
                 else:
                     raise ValueError('No type for atom %s %s %d' % (atom.name, atom.residue.name, atom.residue.index))

@@ -31,6 +31,7 @@
 #include <map>
 #include "openmm/reference/fftpack.h"
 #include <complex>
+#include <assert.h>
 
 using std::vector;
 
@@ -273,8 +274,6 @@ class MBPolReferenceElectrostaticsForce {
     *
     * virtual calculateInducedDipoles()                    calculate induced dipoles:
     *                                                          field at each site due to fixed multipoles first calculated
-    *                                                          if polarization type == Direct,
-    *                                                          initial induced dipoles are calculated, but are not converged.
     *                                                          if polarization type == Mutual, then loop until
     *                                                          induce dipoles converge.
     *                                                       For GK, include gkField in setup
@@ -326,19 +325,6 @@ public:
         PME = 1
     };
 
-    enum PolarizationType {
-
-        /**
-         * Mutual polarization
-         */
-        Mutual = 0,
-
-        /**
-         * Direct polarization
-         */
-        Direct = 1
-    };
-
     enum ChargeDerivativesIndicesFinal { vsH1f, vsH2f, vsMf };
 
     /**
@@ -375,20 +361,6 @@ public:
     void setNonbondedMethod( NonbondedMethod nonbondedMethod );
 
     /**
-     * Get polarization type.
-     *
-     * @return polarization type
-     */
-    PolarizationType getPolarizationType( void ) const;
-
-    /**
-     * Set polarization type.
-     *
-     * @param  polarizationType polarization type
-     */
-    void setPolarizationType( PolarizationType polarizationType );
-
-    /**
      * Get flag indicating if mutual induced dipoles are converged.
      *
      * @return nonzero if converged
@@ -408,6 +380,15 @@ public:
 
 
     bool getIncludeChargeRedistribution( void ) const;
+
+    void setTholeParameters( std::vector<RealOpenMM> tholeP) {
+        _tholeParameters=tholeP;
+    }
+
+    std::vector<RealOpenMM> getTholeParameters( void ) const {
+        assert(_tholeParameters.size() > 0);
+        return _tholeParameters;
+    }
 
     /**
      * Get the final epsilon for mutual induced dipoles.
@@ -459,25 +440,17 @@ public:
      * @param tholes                    Thole factors for each particle
      * @param dampingFactors            damping factors for each particle
      * @param polarity                  polarity for each particle
-     * @param axisTypes                 axis type (Z-then-X, ... ) for each particle
-     * @param multipoleAtomZs           indicies of particle specifying the molecular frame z-axis for each particle
-     * @param multipoleAtomXs           indicies of particle specifying the molecular frame x-axis for each particle
-     * @param multipoleAtomYs           indicies of particle specifying the molecular frame y-axis for each particle
-     * @param multipoleAtomCovalentInfo covalent info needed to set scaling factors
      * @param forces                    add forces to this vector
      *
      * @return energy
      */
     RealOpenMM calculateForceAndEnergy( const std::vector<OpenMM::RealVec>& particlePositions,
                                         const std::vector<RealOpenMM>& charges,
+                                        const std::vector<int>& moleculeIndices,
+                                        const std::vector<int>& atomTypes,
                                         const std::vector<RealOpenMM>& tholes,
                                         const std::vector<RealOpenMM>& dampingFactors,
                                         const std::vector<RealOpenMM>& polarity,
-                                        const std::vector<int>& axisTypes,
-                                        const std::vector<int>& multipoleAtomZs,
-                                        const std::vector<int>& multipoleAtomXs,
-                                        const std::vector<int>& multipoleAtomYs,
-                                        const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
                                         std::vector<OpenMM::RealVec>& forces );
 
     /**
@@ -489,24 +462,16 @@ public:
      * @param tholes                    Thole factors for each particle
      * @param dampingFactors            dampling factors for each particle
      * @param polarity                  polarity for each particle
-     * @param axisTypes                 axis type (Z-then-X, ... ) for each particle
-     * @param multipoleAtomZs           indicies of particle specifying the molecular frame z-axis for each particle
-     * @param multipoleAtomXs           indicies of particle specifying the molecular frame x-axis for each particle
-     * @param multipoleAtomYs           indicies of particle specifying the molecular frame y-axis for each particle
-     * @param multipoleAtomCovalentInfo covalent info needed to set scaling factors
      * @param outputElectrostaticsMoments    output multipole moments
      */
     void calculateMBPolSystemElectrostaticsMoments( const std::vector<RealOpenMM>& masses,
                                                 const std::vector<OpenMM::RealVec>& particlePositions,
                                                 const std::vector<RealOpenMM>& charges,
+                                                const std::vector<int>& moleculeIndices,
+                                                const std::vector<int>& atomTypes,
                                                 const std::vector<RealOpenMM>& tholes,
                                                 const std::vector<RealOpenMM>& dampingFactors,
                                                 const std::vector<RealOpenMM>& polarity,
-                                                const std::vector<int>& axisTypes,
-                                                const std::vector<int>& multipoleAtomZs,
-                                                const std::vector<int>& multipoleAtomXs,
-                                                const std::vector<int>& multipoleAtomYs,
-                                                const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
                                                 std::vector<RealOpenMM>& outputElectrostaticsMoments);
 
     /**
@@ -517,24 +482,16 @@ public:
      * @param tholes                    Thole factors for each particle
      * @param dampingFactors            dampling factors for each particle
      * @param polarity                  polarity for each particle
-     * @param axisTypes                 axis type (Z-then-X, ... ) for each particle
-     * @param multipoleAtomZs           indicies of particle specifying the molecular frame z-axis for each particle
-     * @param multipoleAtomXs           indicies of particle specifying the molecular frame x-axis for each particle
-     * @param multipoleAtomYs           indicies of particle specifying the molecular frame y-axis for each particle
-     * @param multipoleAtomCovalentInfo covalent info needed to set scaling factors
      * @param input grid                input grid points to compute potential
      * @param outputPotential           output electrostatic potential
      */
     void calculateElectrostaticPotential( const std::vector<OpenMM::RealVec>& particlePositions,
                                           const std::vector<RealOpenMM>& charges,
+                                          const std::vector<int>& moleculeIndices,
+                                          const std::vector<int>& atomTypes,
                                           const std::vector<RealOpenMM>& tholes,
                                           const std::vector<RealOpenMM>& dampingFactors,
                                           const std::vector<RealOpenMM>& polarity,
-                                          const std::vector<int>& axisTypes,
-                                          const std::vector<int>& multipoleAtomZs,
-                                          const std::vector<int>& multipoleAtomXs,
-                                          const std::vector<int>& multipoleAtomYs,
-                                          const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
                                           const std::vector<RealVec>& inputGrid,
                                           std::vector<RealOpenMM>& outputPotential );
 
@@ -558,9 +515,8 @@ protected:
             RealOpenMM thole[5];
             RealOpenMM dampingFactor;
             RealOpenMM polarity;
-            int multipoleAtomZs;
-            int multipoleAtomYs;
-            int multipoleAtomXs;
+            unsigned int moleculeIndex;
+            unsigned int atomType;
     };
 
     /*
@@ -576,8 +532,8 @@ protected:
     unsigned int _numParticles;
 
     NonbondedMethod _nonbondedMethod;
-    PolarizationType _polarizationType;
     bool _includeChargeRedistribution;
+    std::vector<RealOpenMM> _tholeParameters;
     RealOpenMM _electric;
     RealOpenMM _dielectric;
 
@@ -608,20 +564,16 @@ protected:
      * @param tholes              Thole parameters
      * @param dampingFactors      dampming factors
      * @param polarity            polarity
-     * @param multipoleAtomZs     vector of z-particle indices used to map molecular frame to lab frame
-     * @param multipoleAtomYs     vector of y-particle indices used to map molecular frame to lab frame
-     * @param multipoleAtomXs     vector of x-particle indices used to map molecular frame to lab frame
      * @param particleData        output data struct
      *
      */
     void loadParticleData( const std::vector<OpenMM::RealVec>& particlePositions,
                            const std::vector<RealOpenMM>& charges,
+                           const std::vector<int>& moleculeIndices,
+                           const std::vector<int>& atomTypes,
                            const std::vector<RealOpenMM>& tholes,
                            const std::vector<RealOpenMM>& dampingFactors,
                            const std::vector<RealOpenMM>& polarity,
-                           const std::vector<int>& multipoleAtomZs,
-                           const std::vector<int>& multipoleAtomXs,
-                           const std::vector<int>& multipoleAtomYs,
                            std::vector<ElectrostaticsParticleData>& particleData ) const;
 
     void printPotential (std::vector<RealOpenMM> electrostaticPotential, RealOpenMM energy, std::string name, const std::vector<ElectrostaticsParticleData>& particleData );
@@ -689,8 +641,7 @@ protected:
      * @param dScale                  d-scale value for i-j interaction
      * @param pScale                  p-scale value for i-j interaction
      */
-    virtual void calculateFixedElectrostaticsFieldPairIxn( const ElectrostaticsParticleData& particleI, const ElectrostaticsParticleData& particleJ,
-                                                      RealOpenMM dScale, RealOpenMM pScale );
+    virtual void calculateFixedElectrostaticsFieldPairIxn( const ElectrostaticsParticleData& particleI, const ElectrostaticsParticleData& particleJ);
 
     /**
      * Initialize induced dipoles
@@ -784,24 +735,16 @@ protected:
      * @param tholes                    Thole factors for each particle
      * @param dampingFactors            dampling factors for each particle
      * @param polarity                  polarity for each particle
-     * @param axisTypes                 axis type (Z-then-X, ... ) for each particle
-     * @param multipoleAtomZs           indicies of particle specifying the molecular frame z-axis for each particle
-     * @param multipoleAtomXs           indicies of particle specifying the molecular frame x-axis for each particle
-     * @param multipoleAtomYs           indicies of particle specifying the molecular frame y-axis for each particle
-     * @param multipoleAtomCovalentInfo covalent info needed to set scaling factors
      * @param particleData              output vector of parameters (charge, labFrame dipoles, quadrupoles, ...) for particles
      *
      */
     void setup( const std::vector<OpenMM::RealVec>& particlePositions,
                 const std::vector<RealOpenMM>& charges,
+                const std::vector<int>& moleculeIndices,
+                const std::vector<int>& atomTypes,
                 const std::vector<RealOpenMM>& tholes,
                 const std::vector<RealOpenMM>& dampingFactors,
                 const std::vector<RealOpenMM>& polarity,
-                const std::vector<int>& axisTypes,
-                const std::vector<int>& multipoleAtomZs,
-                const std::vector<int>& multipoleAtomXs,
-                const std::vector<int>& multipoleAtomYs,
-                const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo,
                 std::vector<ElectrostaticsParticleData>& particleData );
 
     /**
@@ -1063,8 +1006,7 @@ private:
      * @param dScale                  d-scale value for i-j interaction
      * @param pScale                  p-scale value for i-j interaction
      */
-    void calculateFixedElectrostaticsFieldPairIxn( const ElectrostaticsParticleData& particleI, const ElectrostaticsParticleData& particleJ,
-                                              RealOpenMM dscale, RealOpenMM pscale );
+    void calculateFixedElectrostaticsFieldPairIxn( const ElectrostaticsParticleData& particleI, const ElectrostaticsParticleData& particleJ);
 
     /**
      * Calculate fixed multipole fields.
@@ -1255,13 +1197,10 @@ private:
     /**
      * Calculate reciprocal space energy/force for dipole interaction.
      *
-     * @param polarizationType  if 'Direct' polariztion, only initial induced dipoles calculated
-     *                          if 'Mutual' polariztion, induced dipoles converged to specified tolerance
      * @param particleData      vector of particle positions and parameters (charge, labFrame dipoles, quadrupoles, ...)
      * @param forces            vector of particle forces to be updated
      */
-     RealOpenMM computeReciprocalSpaceInducedDipoleForceAndEnergy( MBPolReferenceElectrostaticsForce::PolarizationType polarizationType,
-                                                                   const std::vector<ElectrostaticsParticleData>& particleData,
+     RealOpenMM computeReciprocalSpaceInducedDipoleForceAndEnergy( const std::vector<ElectrostaticsParticleData>& particleData,
                                                                    std::vector<RealVec>& forces, std::vector<RealOpenMM>& electrostaticPotential) const;
 
     /**

@@ -1,0 +1,46 @@
+<ForceField>
+    <AtomTypes>
+        <Type name="MBPol-O" class="O" element="O" mass="15.99943"/>
+        <Type name="MBPol-H" class="H" element="H" mass="1.007947"/>
+        <Type name="MBPol-M" class="M" mass="0"/>
+        <Type name="MBPol-Cl" class="CL" element="CL" mass="35.453200"/>
+    </AtomTypes>
+    <Residues>
+        <Residue name="HOH">
+            <Atom name="O" type="MBPol-O" />
+            <Atom name="H1" type="MBPol-H" />
+            <Atom name="H2" type="MBPol-H" />
+            <Atom name="M" type="MBPol-M" />
+            <VirtualSite type="average3" index="3" atom1="0" atom2="1" atom3="2" weight1="0.573293118" weight2="0.213353441" weight3="0.213353441" />
+            <Bond from="0" to="1" />
+            <Bond from="0" to="2" />
+        </Residue>
+        <Residue name="HOH3">
+            <Atom name="O" type="MBPol-O" />
+            <Atom name="H1" type="MBPol-H" />
+            <Atom name="H2" type="MBPol-H" />
+            <Bond from="0" to="1" />
+            <Bond from="0" to="2" />
+        </Residue>
+        <Residue name="Cl">
+            <Atom name="Cl" type="MBPol-Cl" />
+        </Residue>
+    </Residues>
+    <MBPolElectrostaticsForce>
+        <Residue name="HOH" class1="O" class2="H" class3="H" thole-charge-charge="0.4" thole-charge-dipole="0.4" thole-dipole-dipole-intermolecules="0.055" thole-dipole-dipole-OH="0.626" thole-dipole-dipole-HH="0.055"/>
+        <Residue name="HOH3" class1="O" class2="H" class3="H" thole-charge-charge="0.4" thole-charge-dipole="0.4" thole-dipole-dipole-intermolecules="0.4" thole-dipole-dipole-OH="0.4" thole-dipole-dipole-HH="0.4"/>
+        <Atom type="MBPol-O" charge="-5.1966000e-01" damping-factor="0.00131" polarizability="0.00131" />
+        <Atom type="MBPol-H" charge="2.5983000e-01" damping-factor="0.000294" polarizability="0.000294" />
+        <Atom type="MBPol-M" charge="0" damping-factor="0.00131" polarizability="0" />
+        <setIncludeChargeRedistribution chargeRedistribution="False"/>
+    </MBPolElectrostaticsForce>
+    <MBPolOneBodyForce>
+        <Residue name="HOH" class1="O" class2="H" class3="H" />
+    </MBPolOneBodyForce>
+    <MBPolTwoBodyForce>
+        <Residue name="HOH" class1="O" class2="H" class3="H" />
+    </MBPolTwoBodyForce>
+    <MBPolThreeBodyForce>
+        <Residue name="HOH" class1="O" class2="H" class3="H" />
+    </MBPolThreeBodyForce>
+</ForceField>

@@ -141,19 +141,16 @@ private:
 
     int numElectrostatics;
     MBPolElectrostaticsForce::NonbondedMethod nonbondedMethod;
-    MBPolElectrostaticsForce::PolarizationType polarizationType;
     std::vector<RealOpenMM> charges;
     std::vector<RealOpenMM> dipoles;
     std::vector<RealOpenMM> quadrupoles;
     std::vector<RealOpenMM> tholes;
     std::vector<RealOpenMM> dampingFactors;
     std::vector<RealOpenMM> polarity;
-    std::vector<int>   axisTypes;
-    std::vector<int>   multipoleAtomZs;
-    std::vector<int>   multipoleAtomXs;
-    std::vector<int>   multipoleAtomYs;
+    std::vector<int>   moleculeIndices;
+    std::vector<int>   atomTypes;
     bool includeChargeRedistribution;
-    std::vector< std::vector< std::vector<int> > > multipoleAtomCovalentInfo;
+    std::vector<RealOpenMM> tholeParameters;
 
     int mutualInducedMaxIterations;
     RealOpenMM mutualInducedTargetEpsilon;

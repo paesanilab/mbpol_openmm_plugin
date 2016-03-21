@@ -62,26 +62,6 @@ public:
     }
     std::vector<std::string> getKernelNames();
 
-    /**
-     * Get the CovalentMap for an atom
-     * 
-     * @param force                MBPolElectrostaticsForce force reference
-     * @param index                the index of the atom for which to set parameters
-     * @param minCovalentIndex     minimum covalent index
-     * @param maxCovalentIndex     maximum covalent index
-     */
-    static void getCovalentRange( const MBPolElectrostaticsForce& force, int index,
-                                  const std::vector< MBPolElectrostaticsForce::CovalentType>& lists,
-                                  int* minCovalentIndex, int* maxCovalentIndex );
-
-    /**
-     * Get the covalent degree for the  CovalentEnd lists
-     * 
-     * @param force                MBPolElectrostaticsForce force reference
-     * @param covalentDegree      covalent degrees for the CovalentEnd lists
-     */
-    static void getCovalentDegree( const MBPolElectrostaticsForce& force, std::vector<int>& covalentDegree );
-
     void getElectrostaticPotential( ContextImpl& context, const std::vector< Vec3 >& inputGrid,
                                     std::vector< double >& outputElectrostaticPotential );
 
@@ -93,9 +73,6 @@ private:
     const MBPolElectrostaticsForce& owner;
     Kernel kernel;
 
-    static int CovalentDegrees[MBPolElectrostaticsForce::CovalentEnd];
-    static bool initializedCovalentDegrees;
-    static const int* getCovalentDegrees( void );
 };
 
 } // namespace MBPolPlugin
