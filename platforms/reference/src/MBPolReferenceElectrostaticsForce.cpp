@@ -798,7 +798,8 @@ void MBPolReferenceElectrostaticsForce::setup( const std::vector<RealVec>& parti
 
     if (getIncludeChargeRedistribution())
     {
-        for( unsigned int ii = 0; ii < _numParticles; ii=ii+4 ){ // FIXME this assumes only waters
+        //FIXME this assumes that there will will always be 3 or less individual ions and when water ion that ion is at the end
+        for( unsigned int ii = 0; ii+3 < _numParticles; ii=ii+4 ){
             computeWaterCharge(particleData[ii], particleData[ii+1], particleData[ii+2], particleData[ii+3]);
         }
     }

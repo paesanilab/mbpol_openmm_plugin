@@ -1,0 +1,120 @@
+<ForceField>
+    <AtomTypes>
+        <Type class="O" element="O" mass="15.99943" name="MBPol-O" />
+        <Type class="H" element="H" mass="1.007947" name="MBPol-H" />
+        <Type class="M" mass="0" name="MBPol-M" />
+        <Type class="Li" element="Li" mass="6.941" name="MBPol-Li" />
+        <Type class="Na" element="Na" mass="22.989769" name="MBPol-Na" />
+        <Type class="F" element="F" mass="18.998403" name="MBPol-F" />
+        <Type class="Cl" element="Cl" mass="35.453200" name="MBPol-Cl" />
+        <Type class="Br" element="Br" mass="79.904" name="MBPol-Br" />
+        <Type class="I" element="I" mass="126.90447" name="MBPol-I" />
+    </AtomTypes>
+    <Residues>
+        <Residue name="HOH">
+            <Atom name="O" type="MBPol-O" />
+            <Atom name="H1" type="MBPol-H" />
+            <Atom name="H2" type="MBPol-H" />
+            <Atom name="M" type="MBPol-M" />
+            <VirtualSite atom1="0" atom2="1" atom3="2" index="3" type="average3" weight1="0.573293118" weight2="0.213353441" weight3="0.213353441" />
+            <Bond from="0" to="1" />
+            <Bond from="0" to="2" />
+        </Residue>
+        <Residue name="Li">
+            <Atom name="Li" type="MBPol-Li" />
+        </Residue>
+        <Residue name="Na">
+            <Atom name="Na" type="MBPol-Na" />
+        </Residue>
+        <Residue name="F">
+            <Atom name="F" type="MBPol-F" />
+        </Residue>
+        <Residue name="Cl">
+            <Atom name="Cl" type="MBPol-Cl" />
+        </Residue>
+        <Residue name="Br">
+            <Atom name="Br" type="MBPol-Br" />
+        </Residue>
+        <Residue name="I">
+            <Atom name="I" type="MBPol-I" />
+        </Residue>
+    </Residues>
+    <MBPolElectrostaticsForce>
+        <Residue class1="O" class2="H" class3="H" name="HOH" thole-charge-charge="0.4" thole-charge-dipole="0.4" thole-dipole-dipole-HH="0.055" thole-dipole-dipole-OH="0.626" thole-dipole-dipole-intermolecules="0.055" />
+    <Atom type="MBPol-O" charge="-0.51966" damping-factor="0.00131" polarizability="0.00131" /><Atom type="MBPol-H" charge="0.25983" damping-factor="0.000294" polarizability="0.000294" /><Atom type="MBPol-M" charge="0" damping-factor="0.00131" polarizability="0" /><Atom type="MBPol-Li" charge="1" damping-factor="0.0" polarizability="0.0" /><Atom type="MBPol-Na" charge="1" damping-factor="0.0" polarizability="0.0" /><Atom type="MBPol-F" charge="-1" damping-factor="0.0" polarizability="0.0" /><Atom type="MBPol-Cl" charge="-1" damping-factor="0.0" polarizability="0.0" /><Atom type="MBPol-Br" charge="-1" damping-factor="0.0" polarizability="0.0" /><Atom type="MBPol-I" charge="-1" damping-factor="0.0" polarizability="0.0" /></MBPolElectrostaticsForce>
+    <Script>
+
+numAtomClasses = 9
+
+typeToClass = {
+  'MBPol-O':0,
+  'MBPol-H':1,
+  'MBPol-M':2,
+  'MBPol-Li':3, 
+  'MBPol-Na':4,
+  'MBPol-F':5,
+  'MBPol-Cl':6,
+  'MBPol-Br':7,
+  'MBPol-I':8,
+}
+
+# pair particle parameters
+C6table = [ # kcal/(a**6 mol)
+#     O        H        M       Li       Na        F       Cl       Br        I   
+237.321, 83.4955,       0,  43.147, 176.255, 348.864, 746.199,  942.65, 1294.66,# 0
+83.4955, 20.0935,       0, 18.7122, 85.7869, 128.678, 306.891, 394.168, 568.156,# H
+      0,       0,       0,       0,       0,       0,       0,       0,       0,# M
+ 43.147, 18.7122,       0, 11.0285,       0, 77.2367, 182.017, 231.326, 331.518,# Li
+176.255, 85.7869,       0,       0,  252.63, 306.831, 785.551, 1008.96, 1508.75,# Na
+348.864, 128.678,       0, 77.2367, 306.831, 654.195,       0,       0,       0,#  F
+746.199, 306.891,       0, 182.017, 785.551,       0, 3065.77,       0,       0,# Cl
+ 942.65, 394.168,       0, 231.326, 1008.96,       0,       0, 4908.53,       0,# Br
+1294.66, 568.156,       0, 331.518, 1508.75,       0,       0,       0, 9971.11,#  I
+]
+d6table = [9.29548, 9.7752, 0, 3.97086, 3.7452, 3.27206, 3.21229, 3.01234, 2.6849, 9.7752, 9.40647, 0, 3.58757, 5.26999, 4.20259, 3.20569, 3.14075, 3.03234, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3.97086, 3.58757, 0, 8.64336, 0, 4.43372, 3.80762, 3.57312, 3.62036, 3.7452, 5.26999, 0, 0, 5.44473, 4.61504, 3.28633, 3.12441, 3.05742, 3.27206, 4.20259, 0, 4.43372, 4.61504, 6.04707, 0, 0, 0, 3.21229, 3.20569, 0, 3.80762, 3.28633, 0, 4.60508, 0, 0, 3.01234, 3.14075, 0, 3.57312, 3.12441, 0, 0, 3.92598, 0, 2.6849, 3.03234, 0, 3.62036, 3.05742, 0, 0, 0, 4.86953]
+Atable = [0, 0, 0, 29801.7, 49483.1, 21430.9, 42350.4, 33206.3, 19729.8, 0, 0, 0, 1609.67, 23388.1, 8442.01, 5787.65, 7239.36, 9627.79, 0, 0, 0, 0, 0, 0, 0, 0, 0, 29801.7, 1609.67, 0, 160897, 0, 31820.3, 39948.7, 43428.9, 72706.2, 49483.1, 23388.1, 0, 0, 168980, 112607, 47387.1, 47841.3, 59391.4, 21430.9, 8442.01, 0, 31820.3, 112607, 466921, 0, 0, 0, 42350.4, 5787.65, 0, 39948.7, 47387.1, 0, 668862, 0, 0, 33206.3, 7239.36, 0, 43428.9, 47841.3, 0, 0, 278475, 0, 19729.8, 9627.79, 0, 72706.2, 59391.4, 0, 0, 0, 17189000]
+btable = d6table
+
+
+
+#DISPERSION
+# C6 is in kJ/(nm**6 mol) therefore C6=4.184*10^-6*C6table()
+# d6 is in (nm**-1)       therefore d6=10*d6table()
+
+tt6sum = '(1 + (1 + (1 + (1 + (1 + (1 + (1) * d6 * r / 6) * d6 * r / 5) * d6 * r / 4) * d6 * r / 3) * d6 * r / 2) * d6 * r / 1)'
+
+dispersion = mm.CustomNonbondedForce('-C6*tt6/r^6; tt6=1.0 - tt6sum*exp(-d6*r);tt6sum={}; C6=4.184*10^-6*C6table(type1, type2); d6=10*d6table(type1, type2)'.format(tt6sum))
+
+dispersion.setNonbondedMethod(0)
+dispersion.setCutoffDistance(nonbondedCutoff)
+dispersion.addTabulatedFunction('C6table', mm.Discrete2DFunction(numAtomClasses, numAtomClasses, C6table))
+dispersion.addTabulatedFunction('d6table', mm.Discrete2DFunction(numAtomClasses, numAtomClasses, d6table))
+dispersion.addPerParticleParameter('type')
+for atom in data.atoms:
+    dispersion.addParticle([typeToClass[data.atomType[atom]]])
+     
+from itertools import combinations
+for atom1, atom2 in itertools.combinations(data.atoms, 2):
+    if (atom1.residue == atom2.residue or atom1.name  == 'M' or atom2.name  == 'M'):
+        dispersion.addExclusion(atom1.index, atom2.index)
+    
+sys.addForce(dispersion)
+
+
+# REPULSION
+# A is in kcal/mol it must be kjoule/mol therefore A=4.184*Atable()
+# b is in  a**-1 it must be nm**-1 therefore b=10*btable()
+repulsion = mm.CustomNonbondedForce("A * exp(-b*r); A=4.184*Atable(type1, type2); b=10*btable(type1, type2)")
+
+repulsion.setNonbondedMethod(0)
+repulsion.setCutoffDistance(nonbondedCutoff)
+repulsion.addTabulatedFunction('Atable', mm.Discrete2DFunction(numAtomClasses, numAtomClasses, Atable))
+repulsion.addTabulatedFunction('btable', mm.Discrete2DFunction(numAtomClasses, numAtomClasses, btable))
+repulsion.addPerParticleParameter('type')
+
+for atom in data.atoms:
+    repulsion.addParticle([typeToClass[data.atomType[atom]]])
+
+sys.addForce(repulsion)
+</Script>
+</ForceField>
