@@ -188,7 +188,12 @@ void ReferenceCalcMBPolElectrostaticsForceKernel::initialize(const OpenMM::Syste
             nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
             nb.setCutoffDistance(force.getCutoffDistance());
             int gridSizeX, gridSizeY, gridSizeZ;
+// OpenMM, starting from 7.2.0, has additional parameters `lj`
+#if ((OPENMM_MAJOR_VERSION >= 7 && OPENMM_MINOR_VERSION >= 2) || (OPENMM_MAJOR_VERSION > 7))
+            NonbondedForceImpl::calcPMEParameters(system, nb, alphaEwald, gridSizeX, gridSizeY, gridSizeZ, false);
+#else
             NonbondedForceImpl::calcPMEParameters(system, nb, alphaEwald, gridSizeX, gridSizeY, gridSizeZ);
+#endif
             pmeGridDimension[0] = gridSizeX;
             pmeGridDimension[1] = gridSizeY;
             pmeGridDimension[2] = gridSizeZ;
