@@ -5,10 +5,11 @@
 #----------------------------------------------------
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+set (CMAKE_CXX_STANDARD 11)
 
 # We need to know where OpenMM is installed so we can access the headers and libraries.
 SET(OPENMM_DIR "/usr/local/openmm" CACHE PATH "Where OpenMM is installed")
-INCLUDE_DIRECTORIES("${OPENMM_DIR}/include" "/home/zonca/Paesani/OpenMM/openmm/libraries/lepton/include/")
+INCLUDE_DIRECTORIES("${OPENMM_DIR}/include" "${OPENMM_DIR}/include/openmm/reference" "${OPENMM_DIR}/include/openmm//lepton/")
 LINK_DIRECTORIES("${OPENMM_DIR}/lib" "${OPENMM_DIR}/lib/plugins")
 
 # Select where to install
@@ -87,6 +88,13 @@ ENABLE_TESTING()
 
 ADD_SUBDIRECTORY(platforms/reference)
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}")
+
+# Optimized CPU platform
+
+SET(MBPOL_BUILD_CPU_LIB ON CACHE BOOL "Build optimized CPU platform")
+IF(MBPOL_BUILD_CPU_LIB)
+   ADD_SUBDIRECTORY(platforms/cpu)
+ENDIF(MBPOL_BUILD_CPU_LIB)
 
 FIND_PACKAGE(CUDA QUIET)
 IF(CUDA_FOUND)

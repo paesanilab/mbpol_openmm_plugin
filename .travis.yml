@@ -14,10 +14,10 @@ before_install:
   - bash Miniconda3-latest-Linux-x86_64.sh -b
   - export PATH=$HOME/miniconda3/bin:$PATH
   - conda config --add channels http://conda.binstar.org/omnia
-  - conda create --yes -n py3 python=3.4 --file ci/requirements-conda.txt
+  - conda create --yes -n py3 python=3.6 --file ci/requirements-conda.txt
   - source activate py3
   - $HOME/miniconda3/envs/py3/bin/pip install $PIP_ARGS nose-exclude
-  - conda install --yes openmm=6.3 swig pytest nbconvert jupyter
+  - conda install --yes openmm=7.1.1 swig pytest nbconvert jupyter
 
 
 

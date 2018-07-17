@@ -24,9 +24,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "MBPolReferenceKernelFactory.h"
-#include "MBPolReferenceKernels.h"
-#include "openmm/reference/ReferencePlatform.h"
+#include "MBPolCpuKernelFactory.h"
+#include "MBPolCpuKernels.h"
+#include "openmm/cpu/CpuPlatform.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 #include <iostream>
@@ -34,60 +34,52 @@
 using namespace  OpenMM;
 using namespace MBPolPlugin;
 
-#if defined(WIN32)
-    #include <windows.h>
-    extern "C" void initMBPolReferenceKernels();
-    BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
-        if (ul_reason_for_call == DLL_PROCESS_ATTACH)
-            initMBPolReferenceKernels();
-        return TRUE;
-    }
-#else
-    extern "C" void __attribute__((constructor)) initMBPolReferenceKernels();
-#endif
+extern "C" OPENMM_EXPORT void registerPlatforms() {
+}
 
 extern "C" OPENMM_EXPORT void registerKernelFactories() {
+    std::cout << "Executing registerKernelFactories of CPU MBPol" << std::endl;
     for( int ii = 0; ii < Platform::getNumPlatforms(); ii++ ){
         Platform& platform = Platform::getPlatform(ii);
-        std::cout << "Platform " << platform.getName() << std::endl;
-        if( platform.getName() == "Reference" ){
-
-             MBPolReferenceKernelFactory* factory = new MBPolReferenceKernelFactory();
-
-             platform.registerKernelFactory(CalcMBPolOneBodyForceKernel::Name(),           factory);
-             platform.registerKernelFactory(CalcMBPolTwoBodyForceKernel::Name(),                   factory);
-             platform.registerKernelFactory(CalcMBPolThreeBodyForceKernel::Name(),                   factory);
-             platform.registerKernelFactory(CalcMBPolElectrostaticsForceKernel::Name(),             factory);
-        }
         if( platform.getName() == "CPU" ){
 
-             MBPolReferenceKernelFactory* factory = new MBPolReferenceKernelFactory();
+             MBPolCpuKernelFactory* factory = new MBPolCpuKernelFactory();
 
-             platform.registerKernelFactory(CalcMBPolOneBodyForceKernel::Name(),           factory);
-             platform.registerKernelFactory(CalcMBPolTwoBodyForceKernel::Name(),                   factory);
-             platform.registerKernelFactory(CalcMBPolThreeBodyForceKernel::Name(),                   factory);
-             // Electrostatics is defined in the CPU platform
-             // platform.registerKernelFactory(CalcMBPolElectrostaticsForceKernel::Name(),             factory);
+             //platform.registerKernelFactory(CalcMBPolOneBodyForceKernel::Name(),           factory);
+             //platform.registerKernelFactory(CalcMBPolTwoBodyForceKernel::Name(),                   factory);
+             //platform.registerKernelFactory(CalcMBPolThreeBodyForceKernel::Name(),                   factory);
+             platform.registerKernelFactory(CalcMBPolElectrostaticsForceKernel::Name(),             factory);
+             std::cout << "Registered CPU CalcMBPolElectrostaticsForceKernel::Name" << std::endl;
         }
     }
 }
 
-KernelImpl* MBPolReferenceKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
-    ReferencePlatform::PlatformData& referencePlatformData = *static_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+extern "C" OPENMM_EXPORT void registerMBPolCpuKernelFactories() {
+    try {
+        Platform::getPlatformByName("CPU");
+    }
+    catch (...) {
+        Platform::registerPlatform(new CpuPlatform());
+    }
+    registerKernelFactories();
+}
 
-    // create MBPolReferenceData object if contextToMBPolDataMap does not contain
+KernelImpl* MBPolCpuKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
+    CpuPlatform::PlatformData& data = CpuPlatform::getPlatformData(context);
+
+    // create MBPolCpuData object if contextToMBPolDataMap does not contain
     // key equal to current context
-    if (name == CalcMBPolOneBodyForceKernel::Name())
-        return new ReferenceCalcMBPolOneBodyForceKernel(name, platform, context.getSystem());
+    //if (name == CalcMBPolOneBodyForceKernel::Name())
+    //    return new ReferenceCalcMBPolOneBodyForceKernel(name, platform, context.getSystem());
 
-    if (name == CalcMBPolTwoBodyForceKernel::Name())
-        return new ReferenceCalcMBPolTwoBodyForceKernel(name, platform, context.getSystem());
+    //if (name == CalcMBPolTwoBodyForceKernel::Name())
+    //    return new ReferenceCalcMBPolTwoBodyForceKernel(name, platform, context.getSystem());
 
-    if (name == CalcMBPolThreeBodyForceKernel::Name())
-            return new ReferenceCalcMBPolThreeBodyForceKernel(name, platform, context.getSystem());
+    //if (name == CalcMBPolThreeBodyForceKernel::Name())
+    //        return new ReferenceCalcMBPolThreeBodyForceKernel(name, platform, context.getSystem());
 
     if (name == CalcMBPolElectrostaticsForceKernel::Name())
-        return new ReferenceCalcMBPolElectrostaticsForceKernel(name, platform, context.getSystem());
+        return new CpuCalcMBPolElectrostaticsForceKernel(name, platform, data);
 
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }

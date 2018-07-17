@@ -7,15 +7,15 @@ import pandas as pd
 import datetime
 import mbpol
 
-configurations = [("mbpol", "Reference"),("amoeba2013", "Reference")]
-boundaries = ["PME", "cluster"]
-num_molecules_list = [256, 512]
+configurations = [("mbpol", "CPU")]
+boundaries = ["cluster"]
+num_molecules_list = [512]
 
 pdb_filenames = { 512: "pdb/H2O_1",
                   256: "pdb/TIP5P_PIMC_0C_LIQ.0"
                 }
 
-steps = 100
+steps = 1
 timestep = 0.02*unit.femtoseconds
 temperature = 300*unit.kelvin
 
@@ -57,7 +57,7 @@ for num_molecules in num_molecules_list:
             simulation.context.setPositions(pdb.positions)
             simulation.context.computeVirtualSites()
 
-            state = simulation.context.getState(getForces=True, getEnergy=True)
+            #state = simulation.context.getState(getForces=True, getEnergy=True)
             simulation.context.setVelocitiesToTemperature(temperature)
 
             #simulation.reporters.append(app.StateDataReporter("simulation_{tag}_{timestep}_{temperature}.log".format(**locals()).replace(" ",""), 100, step=True, totalEnergy=True,
